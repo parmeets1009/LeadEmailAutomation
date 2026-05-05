@@ -41,6 +41,7 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("Campaign Builder", html)
         self.assertIn("LLM provider", html)
         self.assertIn("gemini-3.1-pro-preview", html)
+        self.assertIn("Enrich lead websites", html)
         self.assertIn("Lead CSV", html)
         self.assertIn("Draft Review", html)
         self.assertIn("/campaigns/draft", html)

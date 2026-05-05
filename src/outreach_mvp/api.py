@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from .dashboard import dashboard_html
+from .enrichment import ScraplingEnrichmentProvider
 from .llm import DEFAULT_MODELS, LLMRouter
 from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
 from .orchestrator import DraftFirstOrchestrator
@@ -81,6 +82,7 @@ class DraftCampaignRequest(BaseModel):
     suppression_list: list[str] = Field(default_factory=list)
     llm_provider: str = "deterministic"
     llm_model: str | None = None
+    enrich_websites: bool = False
 
 
 class ApproveDraftRequest(BaseModel):
@@ -129,7 +131,8 @@ def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
             llm_router = LLMRouter(provider=request.llm_provider, model=request.llm_model)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        orchestrator = DraftFirstOrchestrator(suppression_list=set(request.suppression_list), llm_router=llm_router)
+        enrichment_provider = ScraplingEnrichmentProvider() if request.enrich_websites else None
+        orchestrator = DraftFirstOrchestrator(suppression_list=set(request.suppression_list), llm_router=llm_router, enrichment_provider=enrichment_provider)
         result = orchestrator.create_draft_campaign(
             company=request.company.to_domain(),
             campaign=request.campaign.to_domain(),

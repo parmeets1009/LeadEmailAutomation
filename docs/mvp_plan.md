@@ -8,23 +8,24 @@ Architecture:
 - JSON file storage for local MVP persistence.
 - CLI demo for generating campaign drafts.
 - FastAPI backend exposing health, LLM provider discovery, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, and draft editing endpoints.
-- Built-in single-page dashboard at `/` for company/campaign input, LLM provider selection, lead CSV paste, draft generation, draft editing, and draft approval.
-- Tests cover business profile generation, LLM routing, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, and dashboard availability.
+- Built-in single-page dashboard at `/` for company/campaign input, LLM provider selection, optional Scrapling/static website enrichment, lead CSV paste, draft generation, draft editing, and draft approval.
+- Tests cover business profile generation, LLM routing, Scrapling/static enrichment, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, and dashboard availability.
 
 MVP scope:
 1. Create an AI-style business profile from plain company details using deterministic local logic as a safe fallback or LLMRouter-backed Codex/Gemini generation.
 2. Normalize manually supplied leads.
 3. Score leads for country/region/title/company fit.
 4. Generate personalized drafts from a user template and available lead/company context.
-5. Enforce draft-first safety: daily cap, unsubscribe phrase, approval_required=true, and no sending.
-6. Persist campaign results as JSON.
-7. Support backend review workflow with stable draft IDs, pending/edited/approved states, reviewer notes, and edit persistence.
-8. Provide a minimal browser dashboard for manually generating, editing, and approving drafts before any email-sending feature exists.
-9. Preserve model metadata (`llm_provider`, `llm_model`, `prompt_version`) on campaign results for future analytics and auditability.
+5. Optionally enrich leads with public website title/meta/H1 context before scoring and drafting.
+6. Enforce draft-first safety: daily cap, unsubscribe phrase, approval_required=true, and no sending.
+7. Persist campaign results as JSON.
+8. Support backend review workflow with stable draft IDs, pending/edited/approved states, reviewer notes, and edit persistence.
+9. Provide a minimal browser dashboard for manually generating, editing, and approving drafts before any email-sending feature exists.
+10. Preserve model metadata (`llm_provider`, `llm_model`, `prompt_version`) on campaign results for future analytics and auditability.
 
 Development sequence:
-1. LLMRouter for deterministic fallback, Codex, and Gemini profile/draft generation. Done for the current MVP increment.
-2. ScraplingEnrichmentProvider: fetches public company pages for personalization facts.
+1. LLMRouter for deterministic fallback, Codex, and Gemini profile/draft generation. Done.
+2. ScraplingEnrichmentProvider for public company pages and personalization facts. Done.
 3. Gmail/OutlookSender: creates drafts only after explicit approval and OAuth setup.
 4. ApolloLeadProvider: calls Apollo MCP/API when a paid key has endpoint access, with CSV fallback.
 

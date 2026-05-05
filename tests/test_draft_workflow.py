@@ -5,6 +5,7 @@ from pathlib import Path
 from outreach_mvp.models import CompanyInput, CampaignInput, LeadInput
 from outreach_mvp.orchestrator import DraftFirstOrchestrator
 from outreach_mvp.llm import LLMRouter, StaticLLMClient
+from outreach_mvp.enrichment import ScraplingEnrichmentProvider, StaticPageFetcher
 from outreach_mvp.storage import JsonCampaignStore
 
 
@@ -46,6 +47,37 @@ class DraftFirstWorkflowTests(unittest.TestCase):
         self.assertTrue(result.drafts[0].approval_required)
         self.assertEqual(result.llm_provider, "gemini")
         self.assertEqual(result.llm_model, "gemini-3.1-pro-preview")
+
+    def test_scrapling_enrichment_extracts_public_website_context(self):
+        fetcher = StaticPageFetcher({
+            "https://gulf.example": """
+            <html><head><title>Gulf Industrial Supplies</title>
+            <meta name="description" content="Industrial maintenance and construction supply distributor in Dubai." />
+            </head><body><h1>Industrial maintenance supplies</h1></body></html>
+            """
+        })
+        provider = ScraplingEnrichmentProvider(fetcher=fetcher)
+        lead = LeadInput("Ahmed", "Khan", "ahmed@example.ae", "Procurement Manager", "Gulf", "UAE", "Industrial", "https://gulf.example", "")
+
+        enriched = provider.enrich(lead)
+
+        self.assertIn("Gulf Industrial Supplies", enriched.context)
+        self.assertIn("Industrial maintenance", enriched.context)
+
+    def test_orchestrator_uses_enrichment_before_scoring_and_drafting(self):
+        fetcher = StaticPageFetcher({
+            "https://gulf.example": "<title>Gulf Industrial Supplies</title><meta name='description' content='Industrial maintenance distributor in Dubai.'>"
+        })
+        provider = ScraplingEnrichmentProvider(fetcher=fetcher)
+        company = CompanyInput("Acme", "", "Rubber products manufacturer", {})
+        campaign = CampaignInput("Enrich", "UAE", "UAE", 1, "Maya", "maya@example.com", "Hi {{first_name}}, I saw {{lead_context}}. {{value_prop}}", ["Procurement Manager"], ["Industrial"])
+        lead = LeadInput("Ahmed", "Khan", "ahmed@example.ae", "Procurement Manager", "Gulf", "UAE", "Industrial", "https://gulf.example", "")
+
+        result = DraftFirstOrchestrator(enrichment_provider=provider).create_draft_campaign(company, campaign, [lead])
+
+        self.assertEqual(len(result.drafts), 1)
+        self.assertIn("Industrial maintenance distributor", result.drafts[0].body)
+        self.assertIn("website_enriched_context", result.drafts[0].lead_score.reasons)
 
     def test_business_profile_extracts_icp_and_value_props_for_manufacturer(self):
         company = CompanyInput(

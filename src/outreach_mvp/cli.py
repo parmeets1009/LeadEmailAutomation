@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
 from .orchestrator import DraftFirstOrchestrator
+from .enrichment import ScraplingEnrichmentProvider
 from .storage import JsonCampaignStore
 
 
@@ -45,6 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-drafts", default=10, type=int)
     parser.add_argument("--llm-provider", default="deterministic", choices=["deterministic", "codex", "gemini"])
     parser.add_argument("--llm-model", default="")
+    parser.add_argument("--enrich-websites", action="store_true", help="Fetch public lead websites for personalization context before scoring")
     args = parser.parse_args(argv)
 
     company = CompanyInput(args.company_name, args.company_website, args.company_description, {})
@@ -59,7 +61,8 @@ def main(argv: list[str] | None = None) -> int:
         target_titles=["Procurement Manager", "Sourcing Manager", "Operations Manager"],
         target_industries=["Industrial", "Construction", "Manufacturing"],
     )
-    result = DraftFirstOrchestrator(llm_provider=args.llm_provider, llm_model=args.llm_model or None).create_draft_campaign(company, campaign, _load_leads(args.leads_csv))
+    enrichment_provider = ScraplingEnrichmentProvider() if args.enrich_websites else None
+    result = DraftFirstOrchestrator(llm_provider=args.llm_provider, llm_model=args.llm_model or None, enrichment_provider=enrichment_provider).create_draft_campaign(company, campaign, _load_leads(args.leads_csv))
     saved = JsonCampaignStore(args.out).save(result)
     print(json.dumps({"saved": str(saved), "draft_count": len(result.drafts), "skipped": result.skipped, "llm_provider": result.llm_provider, "llm_model": result.llm_model}, indent=2))
     return 0

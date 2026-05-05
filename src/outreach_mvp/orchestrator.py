@@ -6,11 +6,13 @@ from .lead_agent import LeadQualificationAgent
 from .models import CampaignInput, CampaignResult, CompanyInput, LeadInput
 from .profile_agent import BusinessProfileAgent
 from .llm import LLMRouter
+from .enrichment import ScraplingEnrichmentProvider
 
 
 class DraftFirstOrchestrator:
-    def __init__(self, suppression_list: set[str] | None = None, llm_router: LLMRouter | None = None, llm_provider: str = "deterministic", llm_model: str | None = None) -> None:
+    def __init__(self, suppression_list: set[str] | None = None, llm_router: LLMRouter | None = None, llm_provider: str = "deterministic", llm_model: str | None = None, enrichment_provider: ScraplingEnrichmentProvider | None = None) -> None:
         self.llm_router = llm_router or LLMRouter(provider=llm_provider, model=llm_model)
+        self.enrichment_provider = enrichment_provider
         self.compliance = ComplianceAgent(suppression_list)
         self.profile_agent = BusinessProfileAgent(self.llm_router)
         self.lead_agent = LeadQualificationAgent()
@@ -24,11 +26,16 @@ class DraftFirstOrchestrator:
         skipped: dict[str, str] = {}
         scored = []
         for lead in leads:
+            original_context = lead.context
+            if self.enrichment_provider:
+                lead = self.enrichment_provider.enrich(lead)
             precheck = self.compliance.precheck_lead(lead)
             if precheck:
                 skipped[lead.email] = precheck
                 continue
             score = self.lead_agent.score(lead, campaign)
+            if lead.context and not original_context:
+                score.reasons.append("website_enriched_context")
             if score.score < 50:
                 skipped[lead.email] = "low_score"
                 continue

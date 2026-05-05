@@ -20,12 +20,12 @@ It does not send email. Every draft has `approval_required: true`.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
 - FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, and draft review/approval.
-- Minimal built-in dashboard at `/` for company/campaign entry, LLM provider selection, CSV lead paste, draft generation, editing, and approval.
+- Minimal built-in dashboard at `/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV lead paste, draft generation, editing, and approval.
 - LLMRouter abstraction for deterministic fallback, Codex/OpenAI-compatible, and Gemini/OpenAI-compatible draft/profile generation with safe deterministic fallback when credentials are missing or calls fail.
+- ScraplingEnrichmentProvider for optional public lead-website context extraction, using Scrapling when installed and a safe static HTTP fallback otherwise.
 
 ## What comes next
 
-- Add ScraplingEnrichmentProvider to fetch public company website context.
 - Add Gmail/Outlook draft creation after OAuth setup.
 - Add reply/bounce/unsubscribe sync and lead response graph analytics.
 
@@ -112,7 +112,8 @@ Draft campaign requests use this shape:
     }
   ],
   "llm_provider": "gemini",
-  "llm_model": "gemini-3.1-pro-preview"
+  "llm_model": "gemini-3.1-pro-preview",
+  "enrich_websites": true
 }
 ```
 
@@ -155,5 +156,6 @@ PYTHONPATH=src python3 -m outreach_mvp.cli \
   --leads-csv sample_leads.csv \
   --max-drafts 10 \
   --llm-provider gemini \
-  --llm-model gemini-3.1-pro-preview
+  --llm-model gemini-3.1-pro-preview \
+  --enrich-websites
 ```

@@ -138,6 +138,7 @@ def dashboard_html() -> str:
           </div>
           <div><label>LLM model</label><input id="llmModel" placeholder="optional, e.g. gemini-3.1-pro-preview" /></div>
         </div>
+        <label><input id="enrichWebsites" type="checkbox" style="width:auto; margin-right:8px;" />Enrich lead websites with Scrapling/static fetch</label>
       </div>
 
       <div class="card full">
@@ -198,7 +199,8 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
         },
         leads: csvToLeads(document.getElementById('leadCsv').value),
         llm_provider: document.getElementById('llmProvider').value,
-        llm_model: document.getElementById('llmModel').value || null
+        llm_model: document.getElementById('llmModel').value || null,
+        enrich_websites: document.getElementById('enrichWebsites').checked
       };
     }
 
