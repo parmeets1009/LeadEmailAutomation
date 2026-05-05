@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from .dashboard import dashboard_html
 from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
 from .orchestrator import DraftFirstOrchestrator
 from .storage import JsonCampaignStore
@@ -92,6 +94,10 @@ class EditDraftRequest(BaseModel):
 def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
     app = FastAPI(title="Lead Email Automation API", version="0.1.0")
     store = JsonCampaignStore(Path(storage_dir))
+
+    @app.get("/", response_class=HTMLResponse)
+    def dashboard() -> str:
+        return dashboard_html()
 
     @app.get("/health")
     def health() -> dict[str, str]:

@@ -19,7 +19,8 @@ It does not send email. Every draft has `approval_required: true`.
 - Orchestrator: creates a draft campaign and skips unsafe/low-score leads.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
-- FastAPI backend for health checks, company profiling, campaign draft generation, and campaign retrieval.
+- FastAPI backend for health checks, company profiling, campaign draft generation, campaign retrieval, and draft review/approval.
+- Minimal built-in dashboard at `/` for company/campaign entry, CSV lead paste, draft generation, editing, and approval.
 
 ## What comes next
 
@@ -44,6 +45,21 @@ Run locally:
 cd /opt/data/email-outreach-mvp
 PYTHONPATH=src uvicorn outreach_mvp.api:app --reload
 ```
+
+Open the dashboard:
+
+```text
+http://127.0.0.1:8000/
+```
+
+The dashboard currently supports:
+
+- entering company profile details;
+- entering campaign targeting and sender details;
+- pasting lead CSV data;
+- generating draft emails;
+- editing generated subject/body text;
+- approving drafts.
 
 Available endpoints:
 

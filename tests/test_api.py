@@ -21,6 +21,21 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
+    def test_dashboard_endpoint_serves_review_ui(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers["content-type"])
+        html = response.text
+        self.assertIn("Lead Email Automation", html)
+        self.assertIn("Company Profile", html)
+        self.assertIn("Campaign Builder", html)
+        self.assertIn("Lead CSV", html)
+        self.assertIn("Draft Review", html)
+        self.assertIn("/campaigns/draft", html)
+        self.assertIn("/drafts/draft-1/approve", html)
+        self.assertIn("/drafts/draft-1/edit", html)
+
     def test_company_profile_endpoint_returns_structured_profile(self):
         response = self.client.post(
             "/companies/profile",

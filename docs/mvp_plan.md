@@ -8,7 +8,8 @@ Architecture:
 - JSON file storage for local MVP persistence.
 - CLI demo for generating campaign drafts.
 - FastAPI backend exposing health, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, and draft editing endpoints.
-- Tests cover business profile generation, lead scoring, draft generation, compliance checks, campaign orchestration, and API behavior.
+- Built-in single-page dashboard at `/` for company/campaign input, lead CSV paste, draft generation, draft editing, and draft approval.
+- Tests cover business profile generation, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, and dashboard availability.
 
 MVP scope:
 1. Create an AI-style business profile from plain company details using deterministic local logic as a safe placeholder.
@@ -18,6 +19,7 @@ MVP scope:
 5. Enforce draft-first safety: daily cap, unsubscribe phrase, approval_required=true, and no sending.
 6. Persist campaign results as JSON.
 7. Support backend review workflow with stable draft IDs, pending/edited/approved states, reviewer notes, and edit persistence.
+8. Provide a minimal browser dashboard for manually generating, editing, and approving drafts before any email-sending feature exists.
 
 Future integrations:
 - ApolloLeadProvider: calls Apollo MCP/API when a paid key has endpoint access.
@@ -60,5 +62,6 @@ Initial files:
 - src/outreach_mvp/storage.py
 - src/outreach_mvp/cli.py
 - src/outreach_mvp/api.py
+- src/outreach_mvp/dashboard.py
 - tests/test_draft_workflow.py
 - tests/test_api.py
