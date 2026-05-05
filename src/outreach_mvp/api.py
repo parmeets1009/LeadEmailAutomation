@@ -1,0 +1,120 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+
+from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
+from .orchestrator import DraftFirstOrchestrator
+from .storage import JsonCampaignStore
+
+
+class CompanyRequest(BaseModel):
+    name: str
+    website: str = ""
+    description: str
+    details: dict[str, str] = Field(default_factory=dict)
+
+    def to_domain(self) -> CompanyInput:
+        return CompanyInput(name=self.name, website=self.website, description=self.description, details=self.details)
+
+
+class CampaignRequest(BaseModel):
+    name: str
+    target_country: str
+    target_region: str
+    max_drafts: int = 10
+    sender_name: str
+    sender_email: str
+    template: str
+    target_titles: list[str] = Field(default_factory=list)
+    target_industries: list[str] = Field(default_factory=list)
+
+    def to_domain(self) -> CampaignInput:
+        return CampaignInput(
+            name=self.name,
+            target_country=self.target_country,
+            target_region=self.target_region,
+            max_drafts=self.max_drafts,
+            sender_name=self.sender_name,
+            sender_email=self.sender_email,
+            template=self.template,
+            target_titles=self.target_titles,
+            target_industries=self.target_industries,
+        )
+
+
+class LeadRequest(BaseModel):
+    first_name: str = ""
+    last_name: str = ""
+    email: str = ""
+    title: str = ""
+    company_name: str = ""
+    country: str = ""
+    industry: str = ""
+    website: str = ""
+    context: str = ""
+
+    def to_domain(self) -> LeadInput:
+        return LeadInput(
+            first_name=self.first_name,
+            last_name=self.last_name,
+            email=self.email,
+            title=self.title,
+            company_name=self.company_name,
+            country=self.country,
+            industry=self.industry,
+            website=self.website,
+            context=self.context,
+        )
+
+
+class DraftCampaignRequest(BaseModel):
+    company: CompanyRequest
+    campaign: CampaignRequest
+    leads: list[LeadRequest]
+    suppression_list: list[str] = Field(default_factory=list)
+
+
+def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
+    app = FastAPI(title="Lead Email Automation API", version="0.1.0")
+    store = JsonCampaignStore(Path(storage_dir))
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.post("/companies/profile")
+    def profile_company(company: CompanyRequest) -> dict[str, Any]:
+        profile = DraftFirstOrchestrator().profile_company(company.to_domain())
+        return to_plain_data(profile)
+
+    @app.post("/campaigns/draft", status_code=201)
+    def create_draft_campaign(request: DraftCampaignRequest) -> dict[str, Any]:
+        orchestrator = DraftFirstOrchestrator(suppression_list=set(request.suppression_list))
+        result = orchestrator.create_draft_campaign(
+            company=request.company.to_domain(),
+            campaign=request.campaign.to_domain(),
+            leads=[lead.to_domain() for lead in request.leads],
+        )
+        saved_path = store.save(result)
+        data = to_plain_data(result)
+        data["campaign_id"] = saved_path.stem
+        return data
+
+    @app.get("/campaigns/{campaign_id}")
+    def get_campaign(campaign_id: str) -> dict[str, Any]:
+        try:
+            result = store.load(f"{campaign_id}.json")
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="campaign not found") from exc
+        data = to_plain_data(result)
+        data["campaign_id"] = campaign_id
+        return data
+
+    return app
+
+
+app = create_app()

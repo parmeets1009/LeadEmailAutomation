@@ -7,7 +7,8 @@ Architecture:
 - CSV/manual lead import first, with adapter interfaces for Apollo and Scrapling.
 - JSON file storage for local MVP persistence.
 - CLI demo for generating campaign drafts.
-- Tests cover business profile generation, lead scoring, draft generation, compliance checks, and campaign orchestration.
+- FastAPI backend exposing health, profile, draft campaign, and saved campaign retrieval endpoints.
+- Tests cover business profile generation, lead scoring, draft generation, compliance checks, campaign orchestration, and API behavior.
 
 MVP scope:
 1. Create an AI-style business profile from plain company details using deterministic local logic as a safe placeholder.
@@ -57,4 +58,6 @@ Initial files:
 - src/outreach_mvp/orchestrator.py
 - src/outreach_mvp/storage.py
 - src/outreach_mvp/cli.py
+- src/outreach_mvp/api.py
 - tests/test_draft_workflow.py
+- tests/test_api.py

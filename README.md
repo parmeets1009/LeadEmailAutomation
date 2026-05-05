@@ -19,6 +19,7 @@ It does not send email. Every draft has `approval_required: true`.
 - Orchestrator: creates a draft campaign and skips unsafe/low-score leads.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
+- FastAPI backend for health checks, company profiling, campaign draft generation, and campaign retrieval.
 
 ## What comes next
 
@@ -32,7 +33,66 @@ It does not send email. Every draft has `approval_required: true`.
 
 ```bash
 cd /opt/data/email-outreach-mvp
-PYTHONPATH=src python3 -m unittest tests.test_draft_workflow -v
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
+
+## API server
+
+Run locally:
+
+```bash
+cd /opt/data/email-outreach-mvp
+PYTHONPATH=src uvicorn outreach_mvp.api:app --reload
+```
+
+Available endpoints:
+
+- `GET /health` returns `{ "status": "ok" }`.
+- `POST /companies/profile` creates a structured business profile from company details.
+- `POST /campaigns/draft` creates draft-first campaign output from company, campaign, and leads payloads. It persists the result to `campaign_runs/{campaign_id}.json`.
+- `GET /campaigns/{campaign_id}` loads a saved campaign result.
+
+Minimal API example:
+
+```bash
+curl -s http://127.0.0.1:8000/health
+```
+
+Draft campaign requests use this shape:
+
+```json
+{
+  "company": {
+    "name": "Acme Rubber Works",
+    "website": "https://acme.example",
+    "description": "Rubber products manufacturer for OEMs and industrial distributors.",
+    "details": {"certifications": "ISO 9001"}
+  },
+  "campaign": {
+    "name": "UAE distributor outreach",
+    "target_country": "United Arab Emirates",
+    "target_region": "UAE",
+    "max_drafts": 10,
+    "sender_name": "Maya",
+    "sender_email": "maya@acme.example",
+    "template": "Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Best, {{sender_name}}",
+    "target_titles": ["Procurement Manager", "Sourcing Manager"],
+    "target_industries": ["Industrial", "Construction"]
+  },
+  "leads": [
+    {
+      "first_name": "Ahmed",
+      "last_name": "Khan",
+      "email": "ahmed@example.ae",
+      "title": "Procurement Manager",
+      "company_name": "Gulf Industrial Supplies",
+      "country": "United Arab Emirates",
+      "industry": "Industrial",
+      "website": "https://gulf.example",
+      "context": "industrial maintenance supplies in Dubai"
+    }
+  ]
+}
 ```
 
 ## Lead CSV columns
