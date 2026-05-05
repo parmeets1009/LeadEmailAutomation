@@ -1,0 +1,128 @@
+{
+  "campaign": {
+    "name": "UAE distributor outreach",
+    "target_country": "United Arab Emirates",
+    "target_region": "UAE",
+    "max_drafts": 10,
+    "sender_name": "Maya",
+    "sender_email": "maya@acme.example",
+    "template": "Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Would it make sense to send a short catalogue? Best, {{sender_name}}",
+    "target_titles": [
+      "Procurement Manager",
+      "Sourcing Manager",
+      "Operations Manager"
+    ],
+    "target_industries": [
+      "Industrial",
+      "Construction",
+      "Manufacturing"
+    ]
+  },
+  "business_profile": {
+    "company_name": "Acme Rubber Works",
+    "website": "",
+    "summary": "Acme Rubber Works provides custom rubber products. Rubber products manufacturer for OEMs and industrial distributors",
+    "product_categories": [
+      "Custom rubber products"
+    ],
+    "buyer_personas": [
+      "Procurement Manager",
+      "Sourcing Manager",
+      "Operations Manager",
+      "Distributor Owner",
+      "OEM Buyer"
+    ],
+    "target_industries": [
+      "Industrial",
+      "Manufacturing",
+      "Wholesale Distribution"
+    ],
+    "value_propositions": [
+      "custom rubber products for industrial buyers",
+      "direct manufacturer supply with consistent quality"
+    ],
+    "suggested_apollo_filters": {
+      "person_titles": [
+        "Procurement Manager",
+        "Sourcing Manager",
+        "Operations Manager",
+        "Distributor Owner",
+        "OEM Buyer"
+      ],
+      "organization_locations": [],
+      "q_organization_keyword_tags": [
+        "Industrial",
+        "Manufacturing",
+        "Wholesale Distribution"
+      ]
+    }
+  },
+  "drafts": [
+    {
+      "lead": {
+        "first_name": "Ahmed",
+        "last_name": "Khan",
+        "email": "ahmed@example.ae",
+        "title": "Procurement Manager",
+        "company_name": "Gulf Industrial Supplies",
+        "country": "United Arab Emirates",
+        "industry": "Industrial",
+        "website": "https://gulf.example",
+        "context": "industrial maintenance supplies in Dubai"
+      },
+      "subject": "Potential supply fit for Gulf Industrial Supplies",
+      "body": "Hi Ahmed, I noticed Gulf Industrial Supplies works in industrial maintenance supplies in Dubai. We manufacture custom rubber products for industrial buyers. Would it make sense to send a short catalogue? Best, Maya\n\nIf this is not relevant, reply 'not relevant' and I will not contact you again.",
+      "personalization_reason": "Personalized using title 'Procurement Manager', company 'Gulf Industrial Supplies', and context 'industrial maintenance supplies in Dubai'.",
+      "lead_score": {
+        "score": 100,
+        "reasons": [
+          "country_match",
+          "title_match",
+          "industry_match",
+          "has_website",
+          "has_context"
+        ]
+      },
+      "compliance": {
+        "status": "passed",
+        "reasons": []
+      },
+      "approval_required": true
+    },
+    {
+      "lead": {
+        "first_name": "Sara",
+        "last_name": "Noor",
+        "email": "sara@example.ae",
+        "title": "Sourcing Manager",
+        "company_name": "BuildRight UAE",
+        "country": "UAE",
+        "industry": "Construction",
+        "website": "https://buildright.example",
+        "context": "construction materials procurement"
+      },
+      "subject": "Potential supply fit for BuildRight UAE",
+      "body": "Hi Sara, I noticed BuildRight UAE works in construction materials procurement. We manufacture custom rubber products for industrial buyers. Would it make sense to send a short catalogue? Best, Maya\n\nIf this is not relevant, reply 'not relevant' and I will not contact you again.",
+      "personalization_reason": "Personalized using title 'Sourcing Manager', company 'BuildRight UAE', and context 'construction materials procurement'.",
+      "lead_score": {
+        "score": 100,
+        "reasons": [
+          "country_match",
+          "title_match",
+          "industry_match",
+          "has_website",
+          "has_context"
+        ]
+      },
+      "compliance": {
+        "status": "passed",
+        "reasons": []
+      },
+      "approval_required": true
+    }
+  ],
+  "skipped": {
+    "bob@example.com": "low_score"
+  },
+  "status": "drafts_ready_for_review"
+}
