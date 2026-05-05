@@ -97,11 +97,97 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertEqual(get_response.status_code, 200)
         self.assertEqual(get_response.json()["campaign"]["name"], "UAE distributor outreach")
 
+    def test_draft_review_workflow_lists_approves_and_edits_drafts(self):
+        self._create_sample_campaign()
+
+        list_response = self.client.get("/campaigns/uae-distributor-outreach/drafts")
+        self.assertEqual(list_response.status_code, 200)
+        drafts = list_response.json()["drafts"]
+        self.assertEqual(len(drafts), 1)
+        self.assertEqual(drafts[0]["draft_id"], "draft-1")
+        self.assertEqual(drafts[0]["review_status"], "pending")
+        self.assertFalse(drafts[0]["approved"])
+
+        approve_response = self.client.patch(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/approve",
+            json={"approved_by": "parmeet", "notes": "Looks good"},
+        )
+        self.assertEqual(approve_response.status_code, 200)
+        approved = approve_response.json()
+        self.assertEqual(approved["draft_id"], "draft-1")
+        self.assertEqual(approved["review_status"], "approved")
+        self.assertTrue(approved["approved"])
+        self.assertEqual(approved["approved_by"], "parmeet")
+        self.assertEqual(approved["review_notes"], "Looks good")
+
+        edit_response = self.client.patch(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/edit",
+            json={"subject": "Updated subject", "body": "Updated body with not relevant opt-out", "edited_by": "parmeet"},
+        )
+        self.assertEqual(edit_response.status_code, 200)
+        edited = edit_response.json()
+        self.assertEqual(edited["subject"], "Updated subject")
+        self.assertEqual(edited["body"], "Updated body with not relevant opt-out")
+        self.assertEqual(edited["review_status"], "edited")
+        self.assertFalse(edited["approved"])
+        self.assertEqual(edited["edited_by"], "parmeet")
+
+        get_response = self.client.get("/campaigns/uae-distributor-outreach")
+        persisted_draft = get_response.json()["drafts"][0]
+        self.assertEqual(persisted_draft["subject"], "Updated subject")
+        self.assertEqual(persisted_draft["review_status"], "edited")
+
+    def test_unknown_draft_review_endpoint_returns_404(self):
+        self._create_sample_campaign()
+
+        response = self.client.patch(
+            "/campaigns/uae-distributor-outreach/drafts/missing/approve",
+            json={"approved_by": "parmeet"},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["detail"], "draft not found")
+
     def test_get_unknown_campaign_returns_404(self):
         response = self.client.get("/campaigns/not-found")
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["detail"], "campaign not found")
+
+    def _create_sample_campaign(self):
+        payload = {
+            "company": {
+                "name": "Acme Rubber Works",
+                "website": "https://acme.example",
+                "description": "Rubber products manufacturer for OEMs, industrial distributors, and construction suppliers.",
+                "details": {"certifications": "ISO 9001"},
+            },
+            "campaign": {
+                "name": "UAE distributor outreach",
+                "target_country": "United Arab Emirates",
+                "target_region": "UAE",
+                "max_drafts": 2,
+                "sender_name": "Maya",
+                "sender_email": "maya@acme.example",
+                "template": "Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Best, {{sender_name}}",
+                "target_titles": ["Procurement Manager", "Sourcing Manager"],
+                "target_industries": ["Industrial", "Construction"],
+            },
+            "leads": [
+                {
+                    "first_name": "Ahmed",
+                    "last_name": "Khan",
+                    "email": "ahmed@example.ae",
+                    "title": "Procurement Manager",
+                    "company_name": "Gulf Industrial Supplies",
+                    "country": "United Arab Emirates",
+                    "industry": "Industrial",
+                    "website": "https://gulf.example",
+                    "context": "industrial maintenance supplies in Dubai",
+                }
+            ],
+        }
+        return self.client.post("/campaigns/draft", json=payload)
 
 
 if __name__ == "__main__":

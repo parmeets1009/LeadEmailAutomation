@@ -7,7 +7,7 @@ Architecture:
 - CSV/manual lead import first, with adapter interfaces for Apollo and Scrapling.
 - JSON file storage for local MVP persistence.
 - CLI demo for generating campaign drafts.
-- FastAPI backend exposing health, profile, draft campaign, and saved campaign retrieval endpoints.
+- FastAPI backend exposing health, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, and draft editing endpoints.
 - Tests cover business profile generation, lead scoring, draft generation, compliance checks, campaign orchestration, and API behavior.
 
 MVP scope:
@@ -17,6 +17,7 @@ MVP scope:
 4. Generate personalized drafts from a user template and available lead/company context.
 5. Enforce draft-first safety: daily cap, unsubscribe phrase, approval_required=true, and no sending.
 6. Persist campaign results as JSON.
+7. Support backend review workflow with stable draft IDs, pending/edited/approved states, reviewer notes, and edit persistence.
 
 Future integrations:
 - ApolloLeadProvider: calls Apollo MCP/API when a paid key has endpoint access.

@@ -71,6 +71,12 @@ class EmailDraft:
     lead_score: LeadScore
     compliance: ComplianceResult
     approval_required: bool = True
+    draft_id: str = ""
+    review_status: str = "pending"
+    approved: bool = False
+    approved_by: str = ""
+    review_notes: str = ""
+    edited_by: str = ""
 
 
 @dataclass(frozen=True)
@@ -108,6 +114,12 @@ def from_campaign_result(data: dict[str, Any]) -> CampaignResult:
                 lead_score=score,
                 compliance=compliance,
                 approval_required=draft_data.get("approval_required", True),
+                draft_id=draft_data.get("draft_id", ""),
+                review_status=draft_data.get("review_status", "pending"),
+                approved=draft_data.get("approved", False),
+                approved_by=draft_data.get("approved_by", ""),
+                review_notes=draft_data.get("review_notes", ""),
+                edited_by=draft_data.get("edited_by", ""),
             )
         )
     return CampaignResult(

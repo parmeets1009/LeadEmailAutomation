@@ -51,6 +51,9 @@ Available endpoints:
 - `POST /companies/profile` creates a structured business profile from company details.
 - `POST /campaigns/draft` creates draft-first campaign output from company, campaign, and leads payloads. It persists the result to `campaign_runs/{campaign_id}.json`.
 - `GET /campaigns/{campaign_id}` loads a saved campaign result.
+- `GET /campaigns/{campaign_id}/drafts` lists reviewable drafts with stable draft IDs and review status.
+- `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/approve` marks a draft as approved and stores reviewer notes.
+- `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/edit` updates draft subject/body and resets approval status to edited/pending re-approval.
 
 Minimal API example:
 
@@ -93,6 +96,23 @@ Draft campaign requests use this shape:
     }
   ]
 }
+```
+
+Review workflow examples:
+
+```bash
+# List drafts for review
+curl -s http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts
+
+# Approve a draft
+curl -s -X PATCH http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/approve \
+  -H 'Content-Type: application/json' \
+  -d '{"approved_by":"parmeet","notes":"Looks good"}'
+
+# Edit a draft; edited drafts are no longer approved until reviewed again
+curl -s -X PATCH http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/edit \
+  -H 'Content-Type: application/json' \
+  -d '{"subject":"Updated subject","body":"Updated body with not relevant opt-out","edited_by":"parmeet"}'
 ```
 
 ## Lead CSV columns

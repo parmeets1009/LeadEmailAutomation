@@ -78,6 +78,17 @@ class DraftCampaignRequest(BaseModel):
     suppression_list: list[str] = Field(default_factory=list)
 
 
+class ApproveDraftRequest(BaseModel):
+    approved_by: str = ""
+    notes: str = ""
+
+
+class EditDraftRequest(BaseModel):
+    subject: str | None = None
+    body: str | None = None
+    edited_by: str = ""
+
+
 def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
     app = FastAPI(title="Lead Email Automation API", version="0.1.0")
     store = JsonCampaignStore(Path(storage_dir))
@@ -107,12 +118,40 @@ def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
     @app.get("/campaigns/{campaign_id}")
     def get_campaign(campaign_id: str) -> dict[str, Any]:
         try:
-            result = store.load(f"{campaign_id}.json")
+            result = store.load_campaign(campaign_id)
         except FileNotFoundError as exc:
             raise HTTPException(status_code=404, detail="campaign not found") from exc
         data = to_plain_data(result)
         data["campaign_id"] = campaign_id
         return data
+
+    @app.get("/campaigns/{campaign_id}/drafts")
+    def list_drafts(campaign_id: str) -> dict[str, Any]:
+        try:
+            result = store.load_campaign(campaign_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="campaign not found") from exc
+        return {"campaign_id": campaign_id, "drafts": to_plain_data(result.drafts)}
+
+    @app.patch("/campaigns/{campaign_id}/drafts/{draft_id}/approve")
+    def approve_draft(campaign_id: str, draft_id: str, request: ApproveDraftRequest) -> dict[str, Any]:
+        try:
+            draft = store.approve_draft(campaign_id, draft_id, approved_by=request.approved_by, notes=request.notes)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="campaign not found") from exc
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="draft not found") from exc
+        return to_plain_data(draft)
+
+    @app.patch("/campaigns/{campaign_id}/drafts/{draft_id}/edit")
+    def edit_draft(campaign_id: str, draft_id: str, request: EditDraftRequest) -> dict[str, Any]:
+        try:
+            draft = store.edit_draft(campaign_id, draft_id, subject=request.subject, body=request.body, edited_by=request.edited_by)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="campaign not found") from exc
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="draft not found") from exc
+        return to_plain_data(draft)
 
     return app
 
