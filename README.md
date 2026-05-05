@@ -19,16 +19,15 @@ It does not send email. Every draft has `approval_required: true`.
 - Orchestrator: creates a draft campaign and skips unsafe/low-score leads.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
-- FastAPI backend for health checks, company profiling, campaign draft generation, campaign retrieval, and draft review/approval.
-- Minimal built-in dashboard at `/` for company/campaign entry, CSV lead paste, draft generation, editing, and approval.
+- FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, and draft review/approval.
+- Minimal built-in dashboard at `/` for company/campaign entry, LLM provider selection, CSV lead paste, draft generation, editing, and approval.
+- LLMRouter abstraction for deterministic fallback, Codex/OpenAI-compatible, and Gemini/OpenAI-compatible draft/profile generation with safe deterministic fallback when credentials are missing or calls fail.
 
 ## What comes next
 
-- Replace deterministic profile/email logic with LLMRouter calls.
-- Add ApolloLeadProvider using the configured Apollo MCP connector once the API key has endpoint access.
 - Add ScraplingEnrichmentProvider to fetch public company website context.
 - Add Gmail/Outlook draft creation after OAuth setup.
-- Add web dashboard and manual approval UI.
+- Add reply/bounce/unsubscribe sync and lead response graph analytics.
 
 ## Test
 
@@ -64,6 +63,7 @@ The dashboard currently supports:
 Available endpoints:
 
 - `GET /health` returns `{ "status": "ok" }`.
+- `GET /llm/providers` lists switchable LLM providers and default models.
 - `POST /companies/profile` creates a structured business profile from company details.
 - `POST /campaigns/draft` creates draft-first campaign output from company, campaign, and leads payloads. It persists the result to `campaign_runs/{campaign_id}.json`.
 - `GET /campaigns/{campaign_id}` loads a saved campaign result.
@@ -110,7 +110,9 @@ Draft campaign requests use this shape:
       "website": "https://gulf.example",
       "context": "industrial maintenance supplies in Dubai"
     }
-  ]
+  ],
+  "llm_provider": "gemini",
+  "llm_model": "gemini-3.1-pro-preview"
 }
 ```
 
@@ -151,5 +153,7 @@ PYTHONPATH=src python3 -m outreach_mvp.cli \
   --sender-email "maya@acme.example" \
   --template "Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Would it make sense to send a short catalogue? Best, {{sender_name}}" \
   --leads-csv sample_leads.csv \
-  --max-drafts 10
+  --max-drafts 10 \
+  --llm-provider gemini \
+  --llm-model gemini-3.1-pro-preview
 ```

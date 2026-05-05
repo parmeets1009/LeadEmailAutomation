@@ -56,7 +56,7 @@ def dashboard_html() -> str:
     .card { grid-column: span 6; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: rgba(0,0,0,0.2) 0 0 0 1px; }
     .card.full { grid-column: 1 / -1; }
     label { display: block; color: var(--soft); font-size: 12px; font-weight: 510; margin: 12px 0 6px; }
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       background: rgba(255,255,255,0.025);
       color: var(--text);
@@ -127,6 +127,17 @@ def dashboard_html() -> str:
           <div><label>Sender name</label><input id="senderName" value="Maya" /></div>
           <div><label>Sender email</label><input id="senderEmail" value="maya@acme.example" /></div>
         </div>
+        <div class="row">
+          <div>
+            <label>LLM provider</label>
+            <select id="llmProvider">
+              <option value="deterministic">Deterministic fallback</option>
+              <option value="codex">Codex</option>
+              <option value="gemini">Gemini</option>
+            </select>
+          </div>
+          <div><label>LLM model</label><input id="llmModel" placeholder="optional, e.g. gemini-3.1-pro-preview" /></div>
+        </div>
       </div>
 
       <div class="card full">
@@ -185,7 +196,9 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
           target_titles: ['Procurement Manager', 'Sourcing Manager', 'Operations Manager'],
           target_industries: ['Industrial', 'Construction', 'Manufacturing']
         },
-        leads: csvToLeads(document.getElementById('leadCsv').value)
+        leads: csvToLeads(document.getElementById('leadCsv').value),
+        llm_provider: document.getElementById('llmProvider').value,
+        llm_model: document.getElementById('llmModel').value || null
       };
     }
 
@@ -198,7 +211,7 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
       const res = await fetch('/campaigns/draft', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload()) });
       const data = await res.json();
       currentCampaignId = data.campaign_id;
-      document.getElementById('status').textContent = `Created ${data.drafts.length} draft(s). Skipped: ${JSON.stringify(data.skipped)}`;
+      document.getElementById('status').textContent = `Created ${data.drafts.length} draft(s) with ${data.llm_provider}/${data.llm_model}. Skipped: ${JSON.stringify(data.skipped)}`;
       renderDrafts(data.drafts);
     }
 

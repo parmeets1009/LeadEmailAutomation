@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+from .llm import LLMRouter
 from .models import BusinessProfile, CompanyInput
 
 
 class BusinessProfileAgent:
     """Deterministic MVP stand-in for the future LLM business profiling agent."""
 
+    def __init__(self, llm_router: LLMRouter | None = None) -> None:
+        self.llm_router = llm_router
+
     def profile(self, company: CompanyInput) -> BusinessProfile:
+        if self.llm_router:
+            llm_profile = self.llm_router.profile_company(company)
+            if llm_profile:
+                return llm_profile
         description = company.description.strip()
         lower = description.lower()
         products = self._product_categories(lower)

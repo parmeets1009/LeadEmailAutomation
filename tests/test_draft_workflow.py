@@ -4,10 +4,49 @@ from pathlib import Path
 
 from outreach_mvp.models import CompanyInput, CampaignInput, LeadInput
 from outreach_mvp.orchestrator import DraftFirstOrchestrator
+from outreach_mvp.llm import LLMRouter, StaticLLMClient
 from outreach_mvp.storage import JsonCampaignStore
 
 
 class DraftFirstWorkflowTests(unittest.TestCase):
+    def test_llm_router_switches_between_codex_gemini_and_deterministic(self):
+        self.assertEqual(LLMRouter(provider="codex").provider, "codex")
+        self.assertEqual(LLMRouter(provider="gemini").provider, "gemini")
+        self.assertEqual(LLMRouter(provider="deterministic").provider, "deterministic")
+
+        with self.assertRaisesRegex(ValueError, "Unsupported LLM provider"):
+            LLMRouter(provider="unknown")
+
+    def test_llm_router_uses_injected_client_for_profile_and_email(self):
+        client = StaticLLMClient(
+            profile_response={
+                "summary": "LLM summary for Acme",
+                "product_categories": ["LLM gaskets"],
+                "buyer_personas": ["LLM Buyer"],
+                "target_industries": ["LLM Industrial"],
+                "value_propositions": ["LLM value prop"],
+                "suggested_apollo_filters": {"person_titles": ["LLM Buyer"]},
+            },
+            draft_response={
+                "subject": "LLM subject",
+                "body": "LLM body for Ahmed",
+                "personalization_reason": "LLM reason",
+            },
+        )
+        router = LLMRouter(provider="gemini", model="gemini-3.1-pro-preview", client=client)
+        company = CompanyInput("Acme", "", "Rubber manufacturer", {})
+        campaign = CampaignInput("Test", "UAE", "UAE", 1, "Maya", "maya@example.com", "Hello {{first_name}}", ["Procurement Manager"], ["Industrial"])
+        lead = LeadInput("Ahmed", "Khan", "ahmed@example.ae", "Procurement Manager", "Gulf", "UAE", "Industrial", "", "industrial supplies")
+
+        result = DraftFirstOrchestrator(llm_router=router).create_draft_campaign(company, campaign, [lead])
+
+        self.assertEqual(result.business_profile.summary, "LLM summary for Acme")
+        self.assertEqual(result.drafts[0].subject, "LLM subject")
+        self.assertIn("not relevant", result.drafts[0].body.lower())
+        self.assertTrue(result.drafts[0].approval_required)
+        self.assertEqual(result.llm_provider, "gemini")
+        self.assertEqual(result.llm_model, "gemini-3.1-pro-preview")
+
     def test_business_profile_extracts_icp_and_value_props_for_manufacturer(self):
         company = CompanyInput(
             name="Acme Rubber Works",

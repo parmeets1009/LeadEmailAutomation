@@ -21,6 +21,15 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
+    def test_llm_providers_endpoint_lists_switchable_providers(self):
+        response = self.client.get("/llm/providers")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["default_provider"], "deterministic")
+        self.assertIn("codex", body["available_providers"])
+        self.assertIn("gemini", body["available_providers"])
+
     def test_dashboard_endpoint_serves_review_ui(self):
         response = self.client.get("/")
 
@@ -30,6 +39,8 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("Lead Email Automation", html)
         self.assertIn("Company Profile", html)
         self.assertIn("Campaign Builder", html)
+        self.assertIn("LLM provider", html)
+        self.assertIn("gemini-3.1-pro-preview", html)
         self.assertIn("Lead CSV", html)
         self.assertIn("Draft Review", html)
         self.assertIn("/campaigns/draft", html)
@@ -96,6 +107,8 @@ class ApiWorkflowTests(unittest.TestCase):
                     "context": "consumer retail",
                 },
             ],
+            "llm_provider": "gemini",
+            "llm_model": "gemini-3.1-pro-preview",
         }
 
         create_response = self.client.post("/campaigns/draft", json=payload)
@@ -103,6 +116,8 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertEqual(create_response.status_code, 201)
         created = create_response.json()
         self.assertEqual(created["campaign_id"], "uae-distributor-outreach")
+        self.assertEqual(created["llm_provider"], "gemini")
+        self.assertEqual(created["llm_model"], "gemini-3.1-pro-preview")
         self.assertEqual(created["status"], "drafts_ready_for_review")
         self.assertEqual(len(created["drafts"]), 1)
         self.assertEqual(created["drafts"][0]["lead"]["email"], "ahmed@example.ae")

@@ -7,12 +7,12 @@ Architecture:
 - CSV/manual lead import first, with adapter interfaces for Apollo and Scrapling.
 - JSON file storage for local MVP persistence.
 - CLI demo for generating campaign drafts.
-- FastAPI backend exposing health, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, and draft editing endpoints.
-- Built-in single-page dashboard at `/` for company/campaign input, lead CSV paste, draft generation, draft editing, and draft approval.
-- Tests cover business profile generation, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, and dashboard availability.
+- FastAPI backend exposing health, LLM provider discovery, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, and draft editing endpoints.
+- Built-in single-page dashboard at `/` for company/campaign input, LLM provider selection, lead CSV paste, draft generation, draft editing, and draft approval.
+- Tests cover business profile generation, LLM routing, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, and dashboard availability.
 
 MVP scope:
-1. Create an AI-style business profile from plain company details using deterministic local logic as a safe placeholder.
+1. Create an AI-style business profile from plain company details using deterministic local logic as a safe fallback or LLMRouter-backed Codex/Gemini generation.
 2. Normalize manually supplied leads.
 3. Score leads for country/region/title/company fit.
 4. Generate personalized drafts from a user template and available lead/company context.
@@ -20,12 +20,13 @@ MVP scope:
 6. Persist campaign results as JSON.
 7. Support backend review workflow with stable draft IDs, pending/edited/approved states, reviewer notes, and edit persistence.
 8. Provide a minimal browser dashboard for manually generating, editing, and approving drafts before any email-sending feature exists.
+9. Preserve model metadata (`llm_provider`, `llm_model`, `prompt_version`) on campaign results for future analytics and auditability.
 
-Future integrations:
-- ApolloLeadProvider: calls Apollo MCP/API when a paid key has endpoint access.
-- ScraplingEnrichmentProvider: fetches public company pages for personalization facts.
-- Gmail/OutlookSender: creates drafts/sends only after explicit approval.
-- LLMRouter: strong model for profiles/final emails; cheap model for scoring/classification.
+Development sequence:
+1. LLMRouter for deterministic fallback, Codex, and Gemini profile/draft generation. Done for the current MVP increment.
+2. ScraplingEnrichmentProvider: fetches public company pages for personalization facts.
+3. Gmail/OutlookSender: creates drafts only after explicit approval and OAuth setup.
+4. ApolloLeadProvider: calls Apollo MCP/API when a paid key has endpoint access, with CSV fallback.
 
 Future intelligence layer: Lead Response Graph
 - Add a graphify-like module inside the app for mapping lead generation, lead attributes, campaigns, email variants, enrichment facts, sent emails, replies, bounces, unsubscribes, and conversions.

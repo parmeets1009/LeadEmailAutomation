@@ -86,6 +86,9 @@ class CampaignResult:
     drafts: list[EmailDraft]
     skipped: dict[str, str]
     status: str = "drafts_ready_for_review"
+    llm_provider: str = "deterministic"
+    llm_model: str = "deterministic-v1"
+    prompt_version: str = "draft-first-v1"
 
 
 def to_plain_data(value: Any) -> Any:
@@ -128,4 +131,7 @@ def from_campaign_result(data: dict[str, Any]) -> CampaignResult:
         drafts=drafts,
         skipped=data.get("skipped", {}),
         status=data.get("status", "drafts_ready_for_review"),
+        llm_provider=data.get("llm_provider", "deterministic"),
+        llm_model=data.get("llm_model", "deterministic-v1"),
+        prompt_version=data.get("prompt_version", "draft-first-v1"),
     )

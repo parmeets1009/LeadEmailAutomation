@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from .dashboard import dashboard_html
+from .llm import DEFAULT_MODELS, LLMRouter
 from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
 from .orchestrator import DraftFirstOrchestrator
 from .storage import JsonCampaignStore
@@ -78,6 +79,8 @@ class DraftCampaignRequest(BaseModel):
     campaign: CampaignRequest
     leads: list[LeadRequest]
     suppression_list: list[str] = Field(default_factory=list)
+    llm_provider: str = "deterministic"
+    llm_model: str | None = None
 
 
 class ApproveDraftRequest(BaseModel):
@@ -103,6 +106,18 @@ def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/llm/providers")
+    def llm_providers() -> dict[str, Any]:
+        return {
+            "default_provider": "deterministic",
+            "available_providers": ["deterministic", "codex", "gemini"],
+            "default_models": {
+                "deterministic": DEFAULT_MODELS["deterministic"],
+                "codex": DEFAULT_MODELS["codex"],
+                "gemini": DEFAULT_MODELS["gemini"],
+            },
+        }
+
     @app.post("/companies/profile")
     def profile_company(company: CompanyRequest) -> dict[str, Any]:
         profile = DraftFirstOrchestrator().profile_company(company.to_domain())
@@ -110,7 +125,11 @@ def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
 
     @app.post("/campaigns/draft", status_code=201)
     def create_draft_campaign(request: DraftCampaignRequest) -> dict[str, Any]:
-        orchestrator = DraftFirstOrchestrator(suppression_list=set(request.suppression_list))
+        try:
+            llm_router = LLMRouter(provider=request.llm_provider, model=request.llm_model)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        orchestrator = DraftFirstOrchestrator(suppression_list=set(request.suppression_list), llm_router=llm_router)
         result = orchestrator.create_draft_campaign(
             company=request.company.to_domain(),
             campaign=request.campaign.to_domain(),
