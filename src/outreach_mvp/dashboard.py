@@ -235,6 +235,8 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
           <textarea id="body-${d.draft_id}">${escapeHtml(d.body)}</textarea>
           <button onclick="approveDraft('${d.draft_id}')">Approve</button>
           <button class="secondary" onclick="editDraft('${d.draft_id}')">Save edits</button>
+          <button class="secondary" onclick="createMailboxDraft('${d.draft_id}', 'gmail')">Create Gmail draft</button>
+          <button class="secondary" onclick="createMailboxDraft('${d.draft_id}', 'outlook')">Create Outlook draft</button>
         </div>`).join('');
     }
 
@@ -253,6 +255,13 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
       });
       document.getElementById('status').textContent = JSON.stringify(await res.json(), null, 2);
       await loadDrafts();
+    }
+
+    async function createMailboxDraft(draftId, provider) {
+      const res = await fetch(`/campaigns/${currentCampaignId}/drafts/${draftId}/mailbox-drafts`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({provider})
+      });
+      document.getElementById('status').textContent = JSON.stringify(await res.json(), null, 2);
     }
 
     function escapeHtml(value) {

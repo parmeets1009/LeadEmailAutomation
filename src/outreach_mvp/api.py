@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from .dashboard import dashboard_html
 from .enrichment import ScraplingEnrichmentProvider
 from .llm import DEFAULT_MODELS, LLMRouter
+from .mailbox import ApprovalRequiredError, LocalMailboxDraftStore, UnsupportedMailboxProviderError
 from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
 from .orchestrator import DraftFirstOrchestrator
 from .storage import JsonCampaignStore
@@ -96,9 +97,14 @@ class EditDraftRequest(BaseModel):
     edited_by: str = ""
 
 
+class MailboxDraftRequest(BaseModel):
+    provider: str
+
+
 def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
     app = FastAPI(title="Lead Email Automation API", version="0.1.0")
     store = JsonCampaignStore(Path(storage_dir))
+    mailbox_store = LocalMailboxDraftStore(Path(storage_dir) / "mailbox_drafts")
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard() -> str:
@@ -180,6 +186,23 @@ def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="draft not found") from exc
         return to_plain_data(draft)
+
+    @app.post("/campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts", status_code=201)
+    def create_mailbox_draft(campaign_id: str, draft_id: str, request: MailboxDraftRequest) -> dict[str, Any]:
+        try:
+            result = store.load_campaign(campaign_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="campaign not found") from exc
+        draft = next((item for item in result.drafts if item.draft_id == draft_id), None)
+        if draft is None:
+            raise HTTPException(status_code=404, detail="draft not found")
+        try:
+            mailbox_result = mailbox_store.create_draft(request.provider, result.campaign, draft)
+        except ApprovalRequiredError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except UnsupportedMailboxProviderError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return to_plain_data(mailbox_result)
 
     return app
 

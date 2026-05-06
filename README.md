@@ -19,14 +19,13 @@ It does not send email. Every draft has `approval_required: true`.
 - Orchestrator: creates a draft campaign and skips unsafe/low-score leads.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
-- FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, and draft review/approval.
-- Minimal built-in dashboard at `/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV lead paste, draft generation, editing, and approval.
+- FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, draft review/approval, and approved Gmail/Outlook draft artifact creation.
+- Minimal built-in dashboard at `/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV lead paste, draft generation, editing, approval, and mailbox draft creation.
 - LLMRouter abstraction for deterministic fallback, Codex/OpenAI-compatible, and Gemini/OpenAI-compatible draft/profile generation with safe deterministic fallback when credentials are missing or calls fail.
 - ScraplingEnrichmentProvider for optional public lead-website context extraction, using Scrapling when installed and a safe static HTTP fallback otherwise.
 
 ## What comes next
 
-- Add Gmail/Outlook draft creation after OAuth setup.
 - Add reply/bounce/unsubscribe sync and lead response graph analytics.
 
 ## Test
@@ -70,6 +69,7 @@ Available endpoints:
 - `GET /campaigns/{campaign_id}/drafts` lists reviewable drafts with stable draft IDs and review status.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/approve` marks a draft as approved and stores reviewer notes.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/edit` updates draft subject/body and resets approval status to edited/pending re-approval.
+- `POST /campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts` creates a safe local Gmail/Outlook-shaped draft artifact only after draft approval.
 
 Minimal API example:
 
@@ -128,10 +128,15 @@ curl -s -X PATCH http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts
   -H 'Content-Type: application/json' \
   -d '{"approved_by":"parmeet","notes":"Looks good"}'
 
-# Edit a draft; edited drafts are no longer approved until reviewed again
-curl -s -X PATCH http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/edit \
+# Create a Gmail-shaped local mailbox draft artifact after approval
+curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts \
   -H 'Content-Type: application/json' \
-  -d '{"subject":"Updated subject","body":"Updated body with not relevant opt-out","edited_by":"parmeet"}'
+  -d '{"provider":"gmail"}'
+
+# Create an Outlook-shaped local mailbox draft artifact after approval
+curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts \
+  -H 'Content-Type: application/json' \
+  -d '{"provider":"outlook"}'
 ```
 
 ## Lead CSV columns

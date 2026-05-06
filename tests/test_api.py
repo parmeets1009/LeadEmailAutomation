@@ -45,6 +45,7 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("Lead CSV", html)
         self.assertIn("Draft Review", html)
         self.assertIn("/campaigns/draft", html)
+        self.assertIn("mailbox-drafts", html)
         self.assertIn("/drafts/draft-1/approve", html)
         self.assertIn("/drafts/draft-1/edit", html)
 
@@ -167,6 +168,38 @@ class ApiWorkflowTests(unittest.TestCase):
         persisted_draft = get_response.json()["drafts"][0]
         self.assertEqual(persisted_draft["subject"], "Updated subject")
         self.assertEqual(persisted_draft["review_status"], "edited")
+
+    def test_gmail_and_outlook_draft_creation_requires_approval(self):
+        self._create_sample_campaign()
+
+        blocked = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "gmail"},
+        )
+        self.assertEqual(blocked.status_code, 409)
+        self.assertEqual(blocked.json()["detail"], "draft must be approved before mailbox draft creation")
+
+        self.client.patch(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/approve",
+            json={"approved_by": "parmeet"},
+        )
+
+        gmail = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "gmail"},
+        )
+        self.assertEqual(gmail.status_code, 201)
+        gmail_body = gmail.json()
+        self.assertEqual(gmail_body["provider"], "gmail")
+        self.assertEqual(gmail_body["status"], "draft_created")
+        self.assertIn("maya@acme.example", gmail_body["from_email"])
+
+        outlook = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "outlook"},
+        )
+        self.assertEqual(outlook.status_code, 201)
+        self.assertEqual(outlook.json()["provider"], "outlook")
 
     def test_unknown_draft_review_endpoint_returns_404(self):
         self._create_sample_campaign()
