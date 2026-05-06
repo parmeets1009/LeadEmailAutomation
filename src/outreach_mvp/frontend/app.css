@@ -160,6 +160,17 @@ button.danger { background: rgba(239, 68, 68, 0.16); color: #fecaca; border: 1px
 .lead-source-panel { margin-top: 8px; }
 .hidden { display: none !important; }
 .lead-preview { margin-top: 12px; min-height: 44px; }
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.history-row:last-child { border-bottom: 0; }
+.history-row strong { color: var(--text); }
+.history-row span { color: var(--muted); }
 .mailbox-card { padding: 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); }
 .review-actions { min-width: 220px; }
 .draft-list { display: grid; gap: 14px; margin-top: 14px; }

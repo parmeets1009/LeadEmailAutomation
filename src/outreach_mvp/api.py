@@ -235,6 +235,11 @@ def create_app(
         data["campaign_id"] = saved_path.stem
         return data
 
+    @app.get("/campaigns")
+    def list_campaigns() -> dict[str, Any]:
+        campaigns = store.list_campaigns()
+        return {"count": len(campaigns), "campaigns": campaigns}
+
     @app.get("/campaigns/{campaign_id}")
     def get_campaign(campaign_id: str) -> dict[str, Any]:
         try:

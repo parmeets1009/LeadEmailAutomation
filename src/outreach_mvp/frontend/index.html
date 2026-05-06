@@ -23,7 +23,7 @@
     </header>
 
     <main>
-      <!-- API route examples used by this dashboard: /campaigns/draft, /leads/apollo/search, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start, mailbox-drafts -->
+      <!-- API route examples used by this dashboard: /campaigns, /campaigns/draft, /leads/apollo/search, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start, mailbox-drafts -->
       <section class="hero panel">
         <div>
           <p class="eyebrow">Campaign workspace</p>
@@ -99,6 +99,17 @@
             <div><label for="targetIndustries">Target industries</label><input id="targetIndustries" value="Industrial, Construction, Manufacturing" /></div>
           </div>
           <label class="checkbox"><input id="enrichWebsites" type="checkbox" />Enrich lead websites with Scrapling/static fetch</label>
+        </article>
+
+        <article class="card span-12">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Campaign History</p>
+              <h2>Open Existing Campaign</h2>
+            </div>
+            <button class="secondary small" data-action="refresh-campaign-history">Refresh history</button>
+          </div>
+          <div id="campaignHistory" class="status">No saved campaigns loaded yet.</div>
         </article>
 
         <article class="card span-12">

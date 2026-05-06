@@ -86,9 +86,11 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("Mailbox Connections", html)
         self.assertIn("Connect Gmail", html)
         self.assertIn("Connect Outlook", html)
+        self.assertIn("Campaign History", html)
         self.assertIn("/mailboxes/status", html)
         self.assertIn("/oauth/gmail/start", html)
         self.assertIn("/oauth/outlook/start", html)
+        self.assertIn("/campaigns", html)
         self.assertIn("/campaigns/draft", html)
         self.assertIn("mailbox-drafts", html)
         self.assertIn("/drafts/draft-1/approve", html)
@@ -111,6 +113,8 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("javascript", js_response.headers["content-type"])
         self.assertIn("function csvToLeads", js_response.text)
         self.assertIn("function renderDrafts", js_response.text)
+        self.assertIn("function loadCampaignHistory", js_response.text)
+        self.assertIn("function openCampaign", js_response.text)
         self.assertIn("Review Queue", js_response.text)
         self.assertIn("Apollo", js_response.text)
 
@@ -225,6 +229,33 @@ class ApiWorkflowTests(unittest.TestCase):
         get_response = self.client.get("/campaigns/uae-distributor-outreach")
         self.assertEqual(get_response.status_code, 200)
         self.assertEqual(get_response.json()["campaign"]["name"], "UAE distributor outreach")
+
+    def test_campaign_list_endpoint_returns_saved_campaign_summaries(self):
+        self._create_sample_campaign()
+        second_payload = self._sample_campaign_payload(
+            campaign_name="Saudi distributor outreach",
+            target_country="Saudi Arabia",
+            target_region="KSA",
+            lead_overrides={"email": "riyadh@example.sa", "company_name": "Riyadh Supplies", "country": "Saudi Arabia", "context": "industrial sourcing in Riyadh"},
+        )
+        self.client.post("/campaigns/draft", json=second_payload)
+
+        response = self.client.get("/campaigns")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["count"], 2)
+        self.assertEqual(body["campaigns"][0]["campaign_id"], "saudi-distributor-outreach")
+        self.assertEqual(body["campaigns"][1]["campaign_id"], "uae-distributor-outreach")
+        self.assertEqual(body["campaigns"][0]["status"], "drafts_ready_for_review")
+        self.assertEqual(body["campaigns"][0]["draft_count"], 1)
+        self.assertEqual(body["campaigns"][0]["approved_count"], 0)
+
+    def test_campaign_list_endpoint_returns_empty_state_when_no_campaigns_exist(self):
+        response = self.client.get("/campaigns")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"count": 0, "campaigns": []})
 
     def test_draft_review_workflow_lists_approves_and_edits_drafts(self):
         self._create_sample_campaign()
@@ -398,7 +429,29 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertEqual(response.json()["detail"], "campaign not found")
 
     def _create_sample_campaign(self):
-        payload = {
+        return self.client.post("/campaigns/draft", json=self._sample_campaign_payload())
+
+    def _sample_campaign_payload(
+        self,
+        campaign_name: str = "UAE distributor outreach",
+        target_country: str = "United Arab Emirates",
+        target_region: str = "UAE",
+        lead_overrides: dict | None = None,
+    ):
+        lead = {
+            "first_name": "Ahmed",
+            "last_name": "Khan",
+            "email": "ahmed@example.ae",
+            "title": "Procurement Manager",
+            "company_name": "Gulf Industrial Supplies",
+            "country": "United Arab Emirates",
+            "industry": "Industrial",
+            "website": "https://gulf.example",
+            "context": "industrial maintenance supplies in Dubai",
+        }
+        if lead_overrides:
+            lead.update(lead_overrides)
+        return {
             "company": {
                 "name": "Acme Rubber Works",
                 "website": "https://acme.example",
@@ -406,9 +459,9 @@ class ApiWorkflowTests(unittest.TestCase):
                 "details": {"certifications": "ISO 9001"},
             },
             "campaign": {
-                "name": "UAE distributor outreach",
-                "target_country": "United Arab Emirates",
-                "target_region": "UAE",
+                "name": campaign_name,
+                "target_country": target_country,
+                "target_region": target_region,
                 "max_drafts": 2,
                 "sender_name": "Maya",
                 "sender_email": "maya@acme.example",
@@ -416,21 +469,8 @@ class ApiWorkflowTests(unittest.TestCase):
                 "target_titles": ["Procurement Manager", "Sourcing Manager"],
                 "target_industries": ["Industrial", "Construction"],
             },
-            "leads": [
-                {
-                    "first_name": "Ahmed",
-                    "last_name": "Khan",
-                    "email": "ahmed@example.ae",
-                    "title": "Procurement Manager",
-                    "company_name": "Gulf Industrial Supplies",
-                    "country": "United Arab Emirates",
-                    "industry": "Industrial",
-                    "website": "https://gulf.example",
-                    "context": "industrial maintenance supplies in Dubai",
-                }
-            ],
+            "leads": [lead],
         }
-        return self.client.post("/campaigns/draft", json=payload)
 
 
 if __name__ == "__main__":

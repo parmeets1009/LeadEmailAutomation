@@ -31,6 +31,21 @@ class JsonCampaignStore:
     def load_campaign(self, campaign_id: str) -> CampaignResult:
         return self.load(f"{campaign_id}.json")
 
+    def list_campaigns(self) -> list[dict[str, str | int]]:
+        campaigns = []
+        for path in sorted(self.directory.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+            result = self.load(path.name)
+            campaigns.append(
+                {
+                    "campaign_id": path.stem,
+                    "name": result.campaign.name,
+                    "status": result.status,
+                    "draft_count": len(result.drafts),
+                    "approved_count": sum(1 for draft in result.drafts if draft.approved),
+                }
+            )
+        return campaigns
+
     def approve_draft(self, campaign_id: str, draft_id: str, approved_by: str, notes: str = "") -> EmailDraft:
         result = self.load_campaign(campaign_id)
         updated_drafts = []

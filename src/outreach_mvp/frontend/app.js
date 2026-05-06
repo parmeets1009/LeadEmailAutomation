@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('[data-action="generate-drafts"]').addEventListener('click', generateDrafts);
   document.querySelector('[data-action="search-apollo"]').addEventListener('click', searchApolloLeads);
   document.querySelector('[data-action="refresh-mailboxes"]').addEventListener('click', loadMailboxStatus);
+  document.querySelector('[data-action="refresh-campaign-history"]').addEventListener('click', loadCampaignHistory);
   document.querySelectorAll('[data-source-tab]').forEach((button) => {
     button.addEventListener('click', () => switchLeadSource(button.dataset.sourceTab));
   });
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     button.addEventListener('click', () => connectMailbox(button.dataset.provider));
   });
   loadMailboxStatus();
+  loadCampaignHistory();
 });
 
 async function apiFetch(url, options = {}) {
@@ -43,6 +45,45 @@ async function loadMailboxStatus() {
     }
   } catch (error) {
     setStatus(`Mailbox status failed: ${error.message}`);
+  }
+}
+
+async function loadCampaignHistory() {
+  try {
+    const data = await apiFetch('/campaigns');
+    renderCampaignHistory(data.campaigns || []);
+  } catch (error) {
+    $('campaignHistory').textContent = `Campaign history failed: ${error.message}`;
+  }
+}
+
+function renderCampaignHistory(campaigns) {
+  if (!campaigns.length) {
+    $('campaignHistory').textContent = 'No saved campaigns yet.';
+    return;
+  }
+  $('campaignHistory').innerHTML = campaigns.map((campaign) => `
+    <div class="history-row">
+      <div>
+        <strong>${escapeHtml(campaign.name)}</strong><br>
+        <span>${escapeHtml(campaign.campaign_id)} · ${escapeHtml(campaign.status)} · drafts ${escapeHtml(campaign.draft_count)} · approved ${escapeHtml(campaign.approved_count)}</span>
+      </div>
+      <button class="secondary small" data-action="open-campaign" data-campaign-id="${escapeAttr(campaign.campaign_id)}">Open</button>
+    </div>`).join('');
+  $('campaignHistory').querySelectorAll('[data-action="open-campaign"]').forEach((button) => {
+    button.addEventListener('click', () => openCampaign(button.dataset.campaignId));
+  });
+}
+
+async function openCampaign(campaignId) {
+  try {
+    const campaign = await apiFetch(`/campaigns/${campaignId}`);
+    currentCampaignId = campaignId;
+    updateMetrics(campaign.drafts || [], campaign.skipped || {});
+    renderDrafts(campaign.drafts || []);
+    setStatus(`Loaded campaign ${campaignId}`, campaign);
+  } catch (error) {
+    setStatus(`Open campaign failed: ${error.message}`);
   }
 }
 
@@ -196,6 +237,7 @@ async function generateDrafts() {
     updateMetrics(data.drafts || [], data.skipped || {});
     setStatus(`Created ${(data.drafts || []).length} draft(s) with ${data.llm_provider}/${data.llm_model}. Skipped: ${Object.keys(data.skipped || {}).length}`);
     renderDrafts(data.drafts || []);
+    await loadCampaignHistory();
   } catch (error) {
     setStatus(`Draft generation failed: ${error.message}`);
   }
