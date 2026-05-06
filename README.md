@@ -19,12 +19,13 @@ It does not send email. Every draft has `approval_required: true`.
 - Orchestrator: creates a draft campaign and skips unsafe/low-score leads.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
-- FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, draft review/approval, local draft artifact creation, and injectable Gmail API draft creation.
+- FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, draft review/approval, local draft artifact creation, Gmail/Outlook OAuth setup, mailbox status, and live draft creation.
 - Minimal built-in dashboard at `/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV lead paste, draft generation, editing, approval, and mailbox draft creation.
 - LLMRouter abstraction for deterministic fallback, Codex/OpenAI-compatible, and Gemini/OpenAI-compatible draft/profile generation with safe deterministic fallback when credentials are missing or calls fail.
 - ScraplingEnrichmentProvider for optional public lead-website context extraction, using Scrapling when installed and a safe static HTTP fallback otherwise.
 - GmailApiDraftStore builds Gmail RFC 2822/base64url draft payloads and calls an injected OAuth-backed client only after approval; it still never sends email.
 - OutlookApiDraftStore builds Microsoft Graph message payloads and calls an OAuth-backed Graph client only after approval; it still never sends email.
+- OAuth setup endpoints and dashboard mailbox connection panel support Gmail and Outlook connect/status flows.
 
 ## What comes next
 
@@ -60,14 +61,19 @@ The dashboard currently supports:
 - generating draft emails;
 - editing generated subject/body text;
 - approving drafts;
+- connecting Gmail/Outlook mailboxes;
 - creating local Gmail/Outlook-shaped mailbox draft artifacts for approved drafts.
 
-Live Gmail draft creation is implemented as an injectable backend adapter (`GmailApiDraftStore`) for tests and future OAuth wiring, not enabled by the default `uvicorn outreach_mvp.api:app` instance until a Gmail client is configured.
+Live Gmail/Outlook draft creation is available after OAuth tokens are connected. The app creates drafts only; it does not send email.
 
 Available endpoints:
 
 - `GET /health` returns `{ "status": "ok" }`.
 - `GET /llm/providers` lists switchable LLM providers and default models.
+- `GET /mailboxes/status` reports Gmail/Outlook OAuth configuration and connection status.
+- `GET /oauth/providers` returns the same mailbox OAuth provider status payload.
+- `GET /oauth/gmail/start` and `GET /oauth/outlook/start` create provider authorization URLs.
+- `GET /oauth/gmail/callback` and `GET /oauth/outlook/callback` exchange OAuth codes and persist token JSON under `campaign_runs/oauth_tokens/`.
 - `POST /companies/profile` creates a structured business profile from company details.
 - `POST /campaigns/draft` creates draft-first campaign output from company, campaign, and leads payloads. It persists the result to `campaign_runs/{campaign_id}.json`.
 - `GET /campaigns/{campaign_id}` loads a saved campaign result.
@@ -156,7 +162,32 @@ curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/
 
 ## OAuth-backed mailbox draft configuration
 
-The default API app auto-loads optional mailbox OAuth clients from environment variables at startup:
+The dashboard includes a Mailbox Connections panel that calls:
+
+```bash
+curl -s http://127.0.0.1:8000/mailboxes/status
+curl -s http://127.0.0.1:8000/oauth/gmail/start
+curl -s http://127.0.0.1:8000/oauth/outlook/start
+```
+
+Configure OAuth apps with environment variables before starting the API:
+
+- `APP_BASE_URL`: public base URL used to build default callback URLs, e.g. `https://app.example.com`.
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
+- `GOOGLE_OAUTH_REDIRECT_URI`: defaults to `${APP_BASE_URL}/oauth/gmail/callback`.
+- `MICROSOFT_OAUTH_CLIENT_ID`
+- `MICROSOFT_OAUTH_CLIENT_SECRET`
+- `MICROSOFT_OAUTH_REDIRECT_URI`: defaults to `${APP_BASE_URL}/oauth/outlook/callback`.
+
+OAuth callback exchanges persist tokens under:
+
+```text
+campaign_runs/oauth_tokens/gmail_token.json
+campaign_runs/oauth_tokens/outlook_token.json
+```
+
+The default API app also supports externally supplied token paths:
 
 - `GMAIL_TOKEN_PATH` or `GOOGLE_TOKEN_PATH`: Google authorized-user token JSON with `https://www.googleapis.com/auth/gmail.compose` scope.
 - `GOOGLE_CLIENT_SECRET_PATH`: optional Google OAuth client secret path, retained for setup tooling/documentation.

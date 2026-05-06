@@ -12,7 +12,8 @@ from .enrichment import ScraplingEnrichmentProvider
 from .llm import DEFAULT_MODELS, LLMRouter
 from .mailbox import ApprovalRequiredError, GmailApiDraftStore, GmailDraftClient, LocalMailboxDraftStore, OutlookApiDraftStore, OutlookDraftClient, UnsupportedMailboxProviderError
 from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
-from .oauth_clients import create_mailbox_clients_from_env
+from .oauth_clients import GmailOAuthDraftClient, OutlookOAuthDraftClient, create_mailbox_clients_from_env
+from .oauth_setup import OAuthConfigurationError, OAuthSetupService, OAuthStateError, create_oauth_setup_service_from_env
 from .orchestrator import DraftFirstOrchestrator
 from .storage import JsonCampaignStore
 
@@ -108,16 +109,31 @@ def create_app(
     gmail_draft_client: GmailDraftClient | None = None,
     outlook_draft_client: OutlookDraftClient | None = None,
     load_oauth_clients_from_env: bool = True,
+    oauth_service: OAuthSetupService | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Lead Email Automation API", version="0.1.0")
-    store = JsonCampaignStore(Path(storage_dir))
-    mailbox_store = LocalMailboxDraftStore(Path(storage_dir) / "mailbox_drafts")
+    storage_path = Path(storage_dir)
+    store = JsonCampaignStore(storage_path)
+    mailbox_store = LocalMailboxDraftStore(storage_path / "mailbox_drafts")
+    oauth_service = oauth_service or create_oauth_setup_service_from_env(storage_path)
     if load_oauth_clients_from_env and (gmail_draft_client is None or outlook_draft_client is None):
         oauth_clients = create_mailbox_clients_from_env()
         gmail_draft_client = gmail_draft_client or oauth_clients.gmail
         outlook_draft_client = outlook_draft_client or oauth_clients.outlook
     gmail_api_store = GmailApiDraftStore(gmail_draft_client) if gmail_draft_client else None
     outlook_api_store = OutlookApiDraftStore(outlook_draft_client) if outlook_draft_client else None
+
+    def get_gmail_api_store() -> GmailApiDraftStore | None:
+        nonlocal gmail_api_store
+        if gmail_api_store is None and oauth_service.token_path("gmail").exists():
+            gmail_api_store = GmailApiDraftStore(GmailOAuthDraftClient.from_authorized_user_file(oauth_service.token_path("gmail")))
+        return gmail_api_store
+
+    def get_outlook_api_store() -> OutlookApiDraftStore | None:
+        nonlocal outlook_api_store
+        if outlook_api_store is None and oauth_service.token_path("outlook").exists():
+            outlook_api_store = OutlookApiDraftStore(OutlookOAuthDraftClient.from_token_file(oauth_service.token_path("outlook")))
+        return outlook_api_store
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard() -> str:
@@ -138,6 +154,30 @@ def create_app(
                 "gemini": DEFAULT_MODELS["gemini"],
             },
         }
+
+    @app.get("/mailboxes/status")
+    def mailbox_status() -> dict[str, Any]:
+        return oauth_service.status()
+
+    @app.get("/oauth/providers")
+    def oauth_providers() -> dict[str, Any]:
+        return oauth_service.status()
+
+    @app.get("/oauth/{provider}/start")
+    def oauth_start(provider: str) -> dict[str, str]:
+        try:
+            return oauth_service.start(provider)
+        except OAuthConfigurationError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    @app.get("/oauth/{provider}/callback")
+    def oauth_callback(provider: str, code: str, state: str) -> dict[str, Any]:
+        try:
+            return oauth_service.callback(provider, code=code, state=state)
+        except OAuthConfigurationError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except OAuthStateError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post("/companies/profile")
     def profile_company(company: CompanyRequest) -> dict[str, Any]:
@@ -215,15 +255,17 @@ def create_app(
             if delivery == "gmail_api":
                 if provider != "gmail":
                     raise UnsupportedMailboxProviderError("gmail_api delivery only supports provider 'gmail'")
-                if gmail_api_store is None:
+                active_gmail_store = get_gmail_api_store()
+                if active_gmail_store is None:
                     raise HTTPException(status_code=503, detail="gmail draft client not configured")
-                mailbox_result = gmail_api_store.create_draft(result.campaign, draft)
+                mailbox_result = active_gmail_store.create_draft(result.campaign, draft)
             elif delivery == "outlook_graph":
                 if provider != "outlook":
                     raise UnsupportedMailboxProviderError("outlook_graph delivery only supports provider 'outlook'")
-                if outlook_api_store is None:
+                active_outlook_store = get_outlook_api_store()
+                if active_outlook_store is None:
                     raise HTTPException(status_code=503, detail="outlook draft client not configured")
-                mailbox_result = outlook_api_store.create_draft(result.campaign, draft)
+                mailbox_result = active_outlook_store.create_draft(result.campaign, draft)
             elif delivery == "local":
                 mailbox_result = mailbox_store.create_draft(request.provider, result.campaign, draft)
             else:

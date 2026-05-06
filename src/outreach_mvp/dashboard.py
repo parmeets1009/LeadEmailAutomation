@@ -95,7 +95,7 @@ def dashboard_html() -> str:
     <div class="pill">Draft-first MVP</div>
   </header>
   <main>
-    <!-- API route examples used by this dashboard: /campaigns/draft, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit -->
+    <!-- API route examples used by this dashboard: /campaigns/draft, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start -->
     <section class="hero">
       <h1>Create, review, and approve personalized outreach drafts.</h1>
       <p>Enter a company profile, campaign targeting, and lead CSV. The backend generates safe drafts, then you edit or approve them before any email integration is added.</p>
@@ -142,6 +142,21 @@ def dashboard_html() -> str:
       </div>
 
       <div class="card full">
+        <h2>Mailbox Connections</h2>
+        <p>Connect Gmail or Outlook to create real mailbox drafts after approval. Local draft artifacts still work without OAuth.</p>
+        <div class="row">
+          <div>
+            <div id="gmailStatus" class="status">Gmail: checking...</div>
+            <button class="secondary" onclick="connectMailbox('gmail')">Connect Gmail</button>
+          </div>
+          <div>
+            <div id="outlookStatus" class="status">Outlook: checking...</div>
+            <button class="secondary" onclick="connectMailbox('outlook')">Connect Outlook</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card full">
         <h2>Email Template</h2>
         <textarea id="template">Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Would it make sense to send a short catalogue? Best, {{sender_name}}</textarea>
       </div>
@@ -166,6 +181,30 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
 
   <script>
     let currentCampaignId = '';
+    let mailboxStatus = {};
+
+    document.addEventListener('DOMContentLoaded', loadMailboxStatus);
+
+    async function loadMailboxStatus() {
+      const res = await fetch('/mailboxes/status');
+      mailboxStatus = await res.json();
+      for (const provider of ['gmail', 'outlook']) {
+        const item = mailboxStatus.providers?.[provider] || {};
+        const el = document.getElementById(`${provider}Status`);
+        if (!el) continue;
+        el.textContent = `${provider}: ${item.connected ? 'connected' : 'not connected'} · ${item.configured ? 'configured' : 'missing OAuth config'}`;
+      }
+    }
+
+    async function connectMailbox(provider) {
+      const res = await fetch(`/oauth/${provider}/start`);
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById('status').textContent = JSON.stringify(data, null, 2);
+        return;
+      }
+      window.location.href = data.auth_url;
+    }
 
     function csvToLeads(csv) {
       const lines = csv.trim().split(/\r?\n/).filter(Boolean);
