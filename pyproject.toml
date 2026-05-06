@@ -21,3 +21,6 @@ outreach-mvp = "outreach_mvp.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+outreach_mvp = ["frontend/*.html", "frontend/*.css", "frontend/*.js"]

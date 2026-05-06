@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lead Email Automation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+  <div class="dashboard-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Draft-first outreach cockpit</div>
+        <div class="brand">Lead Email Automation</div>
+      </div>
+      <div class="topbar-actions">
+        <span class="pill safe">No auto-send</span>
+        <span class="pill">Human approval required</span>
+      </div>
+    </header>
+
+    <main>
+      <!-- API route examples used by this dashboard: /campaigns/draft, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start, mailbox-drafts -->
+      <section class="hero panel">
+        <div>
+          <p class="eyebrow">Campaign workspace</p>
+          <h1>Create, review, and approve personalized outreach drafts.</h1>
+          <p>Enter your company profile, target ICP, and lead CSV. The backend generates safe drafts, then you edit and approve them before local or live mailbox draft creation.</p>
+        </div>
+        <div class="hero-metrics" aria-label="Campaign Health">
+          <div class="metric-card">
+            <span id="metricDrafts">0</span>
+            <small>Drafts ready</small>
+          </div>
+          <div class="metric-card">
+            <span id="metricApproved">0</span>
+            <small>Approved</small>
+          </div>
+          <div class="metric-card">
+            <span id="metricSkipped">0</span>
+            <small>Skipped</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card span-5">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Step 1</p>
+              <h2>Company Profile</h2>
+            </div>
+            <button class="secondary small" data-action="profile-company">Preview Profile</button>
+          </div>
+          <label for="companyName">Company name</label>
+          <input id="companyName" value="Acme Rubber Works" />
+          <label for="companyWebsite">Website</label>
+          <input id="companyWebsite" value="https://acme.example" />
+          <label for="companyDescription">Description</label>
+          <textarea id="companyDescription">Rubber products manufacturer for OEMs, industrial distributors, and construction suppliers.</textarea>
+        </article>
+
+        <article class="card span-7">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Step 2</p>
+              <h2>Campaign Builder</h2>
+            </div>
+            <span class="badge">LLM provider selectable</span>
+          </div>
+          <div class="row">
+            <div><label for="campaignName">Campaign name</label><input id="campaignName" value="UAE distributor outreach" /></div>
+            <div><label for="targetCountry">Target country</label><input id="targetCountry" value="United Arab Emirates" /></div>
+          </div>
+          <div class="row">
+            <div><label for="targetRegion">Target region</label><input id="targetRegion" value="UAE" /></div>
+            <div><label for="maxDrafts">Max drafts</label><input id="maxDrafts" type="number" min="1" max="50" value="10" /></div>
+          </div>
+          <div class="row">
+            <div><label for="senderName">Sender name</label><input id="senderName" value="Maya" /></div>
+            <div><label for="senderEmail">Sender email</label><input id="senderEmail" value="maya@acme.example" /></div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="llmProvider">LLM provider</label>
+              <select id="llmProvider">
+                <option value="deterministic">Deterministic fallback</option>
+                <option value="codex">Codex</option>
+                <option value="gemini">Gemini</option>
+              </select>
+            </div>
+            <div><label for="llmModel">LLM model</label><input id="llmModel" placeholder="optional, e.g. gemini-3.1-pro-preview" /></div>
+          </div>
+          <div class="row">
+            <div><label for="targetTitles">Target titles</label><input id="targetTitles" value="Procurement Manager, Sourcing Manager, Operations Manager" /></div>
+            <div><label for="targetIndustries">Target industries</label><input id="targetIndustries" value="Industrial, Construction, Manufacturing" /></div>
+          </div>
+          <label class="checkbox"><input id="enrichWebsites" type="checkbox" />Enrich lead websites with Scrapling/static fetch</label>
+        </article>
+
+        <article class="card span-12">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Mailbox Connections</p>
+              <h2>Connect Gmail or Outlook</h2>
+            </div>
+            <button class="secondary small" data-action="refresh-mailboxes">Refresh status</button>
+          </div>
+          <p>Live integrations create drafts only after approval. Local Gmail/Outlook-shaped artifacts still work without OAuth.</p>
+          <div class="mailbox-grid">
+            <div class="mailbox-card">
+              <div id="gmailStatus" class="status">Gmail: checking...</div>
+              <button class="secondary" data-provider="gmail" data-action="connect-mailbox">Connect Gmail</button>
+            </div>
+            <div class="mailbox-card">
+              <div id="outlookStatus" class="status">Outlook: checking...</div>
+              <button class="secondary" data-provider="outlook" data-action="connect-mailbox">Connect Outlook</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card span-6">
+          <p class="eyebrow">Step 3</p>
+          <h2>Email Template</h2>
+          <textarea id="template" class="large">Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Would it make sense to send a short catalogue? Best, {{sender_name}}</textarea>
+        </article>
+
+        <article class="card span-6">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Step 4</p>
+              <h2>Lead CSV</h2>
+            </div>
+            <button data-action="generate-drafts">Generate Drafts</button>
+          </div>
+          <p>Paste CSV with columns: first_name,last_name,email,title,company_name,country,industry,website,context</p>
+          <textarea id="leadCsv" class="large">first_name,last_name,email,title,company_name,country,industry,website,context
+Ahmed,Khan,ahmed@example.ae,Procurement Manager,Gulf Industrial Supplies,United Arab Emirates,Industrial,https://gulf.example,industrial maintenance supplies in Dubai
+Sara,Noor,sara@example.ae,Sourcing Manager,BuildRight UAE,UAE,Construction,https://buildright.example,construction materials procurement
+Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,https://retail.example,consumer retail</textarea>
+        </article>
+
+        <article class="card span-12 review-panel">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Review Queue</p>
+              <h2>Draft Review</h2>
+            </div>
+            <div class="review-actions">
+              <select id="mailboxDelivery">
+                <option value="local">Local artifact</option>
+                <option value="gmail_api">Live Gmail draft</option>
+                <option value="outlook_graph">Live Outlook draft</option>
+              </select>
+            </div>
+          </div>
+          <div id="status" class="status">Ready.</div>
+          <div id="drafts" class="draft-list"></div>
+        </article>
+      </section>
+    </main>
+  </div>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>

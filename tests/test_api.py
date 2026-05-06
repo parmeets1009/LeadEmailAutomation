@@ -73,6 +73,25 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("mailbox-drafts", html)
         self.assertIn("/drafts/draft-1/approve", html)
         self.assertIn("/drafts/draft-1/edit", html)
+        self.assertIn('/assets/app.css', html)
+        self.assertIn('/assets/app.js', html)
+        self.assertIn('Campaign Health', html)
+        self.assertIn('Review Queue', html)
+
+    def test_frontend_assets_are_served_for_dashboard(self):
+        css_response = self.client.get("/assets/app.css")
+        js_response = self.client.get("/assets/app.js")
+
+        self.assertEqual(css_response.status_code, 200)
+        self.assertIn("text/css", css_response.headers["content-type"])
+        self.assertIn("--accent", css_response.text)
+        self.assertIn("dashboard-shell", css_response.text)
+
+        self.assertEqual(js_response.status_code, 200)
+        self.assertIn("javascript", js_response.headers["content-type"])
+        self.assertIn("function csvToLeads", js_response.text)
+        self.assertIn("function renderDrafts", js_response.text)
+        self.assertIn("Review Queue", js_response.text)
 
     def test_company_profile_endpoint_returns_structured_profile(self):
         response = self.client.post(

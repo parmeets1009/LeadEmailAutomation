@@ -20,7 +20,7 @@ It does not send email. Every draft has `approval_required: true`.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
 - FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, draft review/approval, local draft artifact creation, Gmail/Outlook OAuth setup, mailbox status, and live draft creation.
-- Minimal built-in dashboard at `/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV lead paste, draft generation, editing, approval, and mailbox draft creation.
+- Browser frontend served at `/` with separate static assets under `/assets/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV lead paste, campaign health metrics, draft generation, editing, approval, and mailbox draft creation.
 - LLMRouter abstraction for deterministic fallback, Codex/OpenAI-compatible, and Gemini/OpenAI-compatible draft/profile generation with safe deterministic fallback when credentials are missing or calls fail.
 - ScraplingEnrichmentProvider for optional public lead-website context extraction, using Scrapling when installed and a safe static HTTP fallback otherwise.
 - GmailApiDraftStore builds Gmail RFC 2822/base64url draft payloads and calls an injected OAuth-backed client only after approval; it still never sends email.

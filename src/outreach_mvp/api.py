@@ -5,9 +5,10 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .dashboard import dashboard_html
+from .dashboard import FRONTEND_DIR, dashboard_html
 from .enrichment import ScraplingEnrichmentProvider
 from .llm import DEFAULT_MODELS, LLMRouter
 from .mailbox import ApprovalRequiredError, GmailApiDraftStore, GmailDraftClient, LocalMailboxDraftStore, OutlookApiDraftStore, OutlookDraftClient, UnsupportedMailboxProviderError
@@ -112,6 +113,7 @@ def create_app(
     oauth_service: OAuthSetupService | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Lead Email Automation API", version="0.1.0")
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
     storage_path = Path(storage_dir)
     store = JsonCampaignStore(storage_path)
     mailbox_store = LocalMailboxDraftStore(storage_path / "mailbox_drafts")
