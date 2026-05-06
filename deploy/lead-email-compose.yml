@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  lead-email-app:
+    image: python:3.13-slim
+    container_name: lead-email-app
+    working_dir: /app
+    command: >-
+      sh -lc "pip install --no-cache-dir -e . &&
+      PYTHONPATH=src uvicorn outreach_mvp.api:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - ../:/app
+    environment:
+      APP_BASE_URL: https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud
+      GOOGLE_OAUTH_REDIRECT_URI: https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud/oauth/gmail/callback
+      MICROSOFT_OAUTH_REDIRECT_URI: https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud/oauth/outlook/callback
+      # Optional if live draft creation is desired:
+      # GOOGLE_OAUTH_CLIENT_ID: your-google-client-id
+      # GOOGLE_OAUTH_CLIENT_SECRET: your-google-client-secret
+      # MICROSOFT_OAUTH_CLIENT_ID: your-microsoft-client-id
+      # MICROSOFT_OAUTH_CLIENT_SECRET: your-microsoft-client-secret
+      # APOLLO_API_KEY: your-apollo-api-key
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.lead-email.rule=Host(`lead.hermes-agent-2bhv.srv1390211.hstgr.cloud`)
+      - traefik.http.routers.lead-email.entrypoints=websecure
+      - traefik.http.routers.lead-email.tls=true
+      - traefik.http.routers.lead-email.tls.certresolver=letsencrypt
+      - traefik.http.services.lead-email.loadbalancer.server.port=8000
+      - traefik.docker.network=traefik
+    networks:
+      - traefik
+    restart: unless-stopped
+
+networks:
+  traefik:
+    external: true

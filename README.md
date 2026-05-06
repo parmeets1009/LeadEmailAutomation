@@ -30,6 +30,7 @@ It does not send email. Every draft has `approval_required: true`.
 
 ## What comes next
 
+- Deploy behind Traefik on a dedicated app subdomain, e.g. `https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud/` using `deploy/lead-email-compose.yml` and `docs/hostinger-traefik-deploy.md`.
 - Add reply/bounce/unsubscribe sync and lead response graph analytics.
 
 ## Test

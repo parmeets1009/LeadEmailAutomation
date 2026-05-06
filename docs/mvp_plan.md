@@ -35,7 +35,7 @@ Development sequence:
 7. Frontend shell refactored into package static assets with campaign health metrics, review queue interactions, robust CSV parsing, and live/local mailbox draft delivery selection. Done.
 8. ApolloLeadProvider: normalizes Apollo people search results into draft-ready leads, exposes `/leads/apollo/search`, and adds frontend CSV/Apollo lead source switching with CSV fallback. Started.
 9. Campaign history/reopen UI: lists saved campaigns, reloads prior drafts into the review queue, and continues review/mailbox-draft workflow. Done.
-10. VPS deployment + Traefik routing for the public app frontend.
+10. VPS deployment + Traefik routing for the public app frontend. In progress: deployment compose template and Hostinger/Traefik runbook added for `lead.hermes-agent-2bhv.srv1390211.hstgr.cloud`.
 
 Future intelligence layer: Lead Response Graph
 - Add a graphify-like module inside the app for mapping lead generation, lead attributes, campaigns, email variants, enrichment facts, sent emails, replies, bounces, unsubscribes, and conversions.
