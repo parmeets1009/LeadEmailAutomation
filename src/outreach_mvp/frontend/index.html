@@ -23,7 +23,7 @@
     </header>
 
     <main>
-      <!-- API route examples used by this dashboard: /campaigns/draft, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start, mailbox-drafts -->
+      <!-- API route examples used by this dashboard: /campaigns/draft, /leads/apollo/search, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start, mailbox-drafts -->
       <section class="hero panel">
         <div>
           <p class="eyebrow">Campaign workspace</p>
@@ -128,19 +128,40 @@
           <textarea id="template" class="large">Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Would it make sense to send a short catalogue? Best, {{sender_name}}</textarea>
         </article>
 
-        <article class="card span-6">
+        <article class="card span-12">
           <div class="section-title">
             <div>
               <p class="eyebrow">Step 4</p>
-              <h2>Lead CSV</h2>
+              <h2>Lead Source / Lead CSV</h2>
             </div>
             <button data-action="generate-drafts">Generate Drafts</button>
           </div>
-          <p>Paste CSV with columns: first_name,last_name,email,title,company_name,country,industry,website,context</p>
-          <textarea id="leadCsv" class="large">first_name,last_name,email,title,company_name,country,industry,website,context
+          <div class="source-tabs">
+            <button class="secondary small active" data-source-tab="csv">Paste CSV</button>
+            <button class="secondary small" data-source-tab="apollo">Search Apollo</button>
+          </div>
+          <div id="csvLeadSource" class="lead-source-panel">
+            <p>Paste CSV with columns: first_name,last_name,email,title,company_name,country,industry,website,context</p>
+            <textarea id="leadCsv" class="large">first_name,last_name,email,title,company_name,country,industry,website,context
 Ahmed,Khan,ahmed@example.ae,Procurement Manager,Gulf Industrial Supplies,United Arab Emirates,Industrial,https://gulf.example,industrial maintenance supplies in Dubai
 Sara,Noor,sara@example.ae,Sourcing Manager,BuildRight UAE,UAE,Construction,https://buildright.example,construction materials procurement
 Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,https://retail.example,consumer retail</textarea>
+          </div>
+          <div id="apolloLeadSource" class="lead-source-panel hidden">
+            <p>Search Apollo using the campaign ICP. If Apollo is not configured, keep using the CSV fallback.</p>
+            <div class="row">
+              <div><label for="apolloLocations">Apollo locations</label><input id="apolloLocations" value="United Arab Emirates" /></div>
+              <div><label for="apolloMaxLeads">Max Apollo leads</label><input id="apolloMaxLeads" type="number" min="1" max="100" value="10" /></div>
+            </div>
+            <div class="row">
+              <div><label for="apolloCompanyDomains">Company domains</label><input id="apolloCompanyDomains" placeholder="optional, comma-separated domains" /></div>
+              <div><label for="apolloCompanyNames">Company names</label><input id="apolloCompanyNames" placeholder="optional, comma-separated names" /></div>
+            </div>
+            <label for="apolloKeywords">Keywords</label>
+            <input id="apolloKeywords" placeholder="optional search keywords" />
+            <button class="secondary" data-action="search-apollo">Search Apollo Leads</button>
+            <div id="apolloLeadPreview" class="lead-preview status">Apollo lead preview is empty.</div>
+          </div>
         </article>
 
         <article class="card span-12 review-panel">

@@ -155,6 +155,11 @@ button.danger { background: rgba(239, 68, 68, 0.16); color: #fecaca; border: 1px
 }
 
 .mailbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.source-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 14px; }
+.source-tabs .active { border-color: rgba(136, 148, 255, 0.7); color: white; background: rgba(109, 124, 255, 0.22); }
+.lead-source-panel { margin-top: 8px; }
+.hidden { display: none !important; }
+.lead-preview { margin-top: 12px; min-height: 44px; }
 .mailbox-card { padding: 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); }
 .review-actions { min-width: 220px; }
 .draft-list { display: grid; gap: 14px; margin-top: 14px; }

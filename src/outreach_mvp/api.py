@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from .apollo import ApolloLeadProvider, ApolloProviderNotConfigured, ApolloSearchClient
 from .dashboard import FRONTEND_DIR, dashboard_html
 from .enrichment import ScraplingEnrichmentProvider
 from .llm import DEFAULT_MODELS, LLMRouter
@@ -105,10 +106,21 @@ class MailboxDraftRequest(BaseModel):
     delivery: str = "local"
 
 
+class ApolloLeadSearchRequest(BaseModel):
+    titles: list[str] = Field(default_factory=list)
+    locations: list[str] = Field(default_factory=list)
+    industries: list[str] = Field(default_factory=list)
+    company_domains: list[str] = Field(default_factory=list)
+    company_names: list[str] = Field(default_factory=list)
+    keywords: str = ""
+    max_leads: int = 25
+
+
 def create_app(
     storage_dir: Path | str = Path("campaign_runs"),
     gmail_draft_client: GmailDraftClient | None = None,
     outlook_draft_client: OutlookDraftClient | None = None,
+    apollo_client: ApolloSearchClient | None = None,
     load_oauth_clients_from_env: bool = True,
     oauth_service: OAuthSetupService | None = None,
 ) -> FastAPI:
@@ -124,6 +136,7 @@ def create_app(
         outlook_draft_client = outlook_draft_client or oauth_clients.outlook
     gmail_api_store = GmailApiDraftStore(gmail_draft_client) if gmail_draft_client else None
     outlook_api_store = OutlookApiDraftStore(outlook_draft_client) if outlook_draft_client else None
+    apollo_provider = ApolloLeadProvider(client=apollo_client) if apollo_client else ApolloLeadProvider.from_env()
 
     def get_gmail_api_store() -> GmailApiDraftStore | None:
         nonlocal gmail_api_store
@@ -185,6 +198,24 @@ def create_app(
     def profile_company(company: CompanyRequest) -> dict[str, Any]:
         profile = DraftFirstOrchestrator().profile_company(company.to_domain())
         return to_plain_data(profile)
+
+    @app.post("/leads/apollo/search")
+    def search_apollo_leads(request: ApolloLeadSearchRequest) -> dict[str, Any]:
+        if apollo_provider is None:
+            raise HTTPException(status_code=503, detail="Apollo lead provider not configured; use CSV fallback or set APOLLO_API_KEY")
+        try:
+            leads = apollo_provider.search_leads(
+                titles=request.titles,
+                locations=request.locations,
+                industries=request.industries,
+                company_domains=request.company_domains,
+                company_names=request.company_names,
+                keywords=request.keywords,
+                max_leads=request.max_leads,
+            )
+        except ApolloProviderNotConfigured as exc:
+            raise HTTPException(status_code=503, detail=f"{exc}; use CSV fallback") from exc
+        return {"source": "apollo", "count": len(leads), "leads": to_plain_data(leads), "fallback_available": "csv"}
 
     @app.post("/campaigns/draft", status_code=201)
     def create_draft_campaign(request: DraftCampaignRequest) -> dict[str, Any]:

@@ -26,6 +26,26 @@ class FakeOutlookDraftClient:
         return {"id": "outlook-draft-789"}
 
 
+class FakeApolloClient:
+    def __init__(self):
+        self.calls = []
+
+    def search_people(self, *, filters, page, per_page):
+        self.calls.append({"filters": filters, "page": page, "per_page": per_page})
+        return {
+            "people": [
+                {
+                    "first_name": "Ahmed",
+                    "last_name": "Khan",
+                    "email": "ahmed@example.ae",
+                    "title": "Procurement Manager",
+                    "organization": {"name": "Gulf Industrial Supplies", "industry": "Industrial", "website_url": "https://gulf.example"},
+                    "country": "United Arab Emirates",
+                }
+            ]
+        }
+
+
 class ApiWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.TemporaryDirectory()
@@ -92,6 +112,39 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("function csvToLeads", js_response.text)
         self.assertIn("function renderDrafts", js_response.text)
         self.assertIn("Review Queue", js_response.text)
+        self.assertIn("Apollo", js_response.text)
+
+    def test_apollo_lead_search_returns_normalized_leads_from_injected_client(self):
+        apollo_client = FakeApolloClient()
+        self.client = TestClient(create_app(storage_dir=Path(self.tmpdir.name), apollo_client=apollo_client))
+
+        response = self.client.post(
+            "/leads/apollo/search",
+            json={
+                "titles": ["Procurement Manager"],
+                "locations": ["United Arab Emirates"],
+                "industries": ["Industrial"],
+                "max_leads": 3,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["source"], "apollo")
+        self.assertEqual(body["count"], 1)
+        self.assertEqual(body["leads"][0]["email"], "ahmed@example.ae")
+        self.assertEqual(body["leads"][0]["company_name"], "Gulf Industrial Supplies")
+        self.assertEqual(apollo_client.calls[0]["filters"]["titles"], ["Procurement Manager"])
+        self.assertEqual(apollo_client.calls[0]["per_page"], 3)
+
+    def test_apollo_lead_search_returns_503_when_provider_not_configured(self):
+        response = self.client.post(
+            "/leads/apollo/search",
+            json={"titles": ["Procurement Manager"], "max_leads": 3},
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("CSV fallback", response.json()["detail"])
 
     def test_company_profile_endpoint_returns_structured_profile(self):
         response = self.client.post(

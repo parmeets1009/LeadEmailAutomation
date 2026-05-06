@@ -1,12 +1,18 @@
 let currentCampaignId = '';
 let mailboxStatus = {};
+let selectedLeadSource = 'csv';
+let apolloLeads = [];
 
 const $ = (id) => document.getElementById(id);
 
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('[data-action="profile-company"]').addEventListener('click', profileCompany);
   document.querySelector('[data-action="generate-drafts"]').addEventListener('click', generateDrafts);
+  document.querySelector('[data-action="search-apollo"]').addEventListener('click', searchApolloLeads);
   document.querySelector('[data-action="refresh-mailboxes"]').addEventListener('click', loadMailboxStatus);
+  document.querySelectorAll('[data-source-tab]').forEach((button) => {
+    button.addEventListener('click', () => switchLeadSource(button.dataset.sourceTab));
+  });
   document.querySelectorAll('[data-action="connect-mailbox"]').forEach((button) => {
     button.addEventListener('click', () => connectMailbox(button.dataset.provider));
   });
@@ -88,6 +94,57 @@ function listFromInput(id) {
   return $(id).value.split(',').map((value) => value.trim()).filter(Boolean);
 }
 
+function switchLeadSource(source) {
+  selectedLeadSource = source;
+  $('csvLeadSource').classList.toggle('hidden', source !== 'csv');
+  $('apolloLeadSource').classList.toggle('hidden', source !== 'apollo');
+  document.querySelectorAll('[data-source-tab]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.sourceTab === source);
+  });
+}
+
+function selectedLeads() {
+  return selectedLeadSource === 'apollo' && apolloLeads.length ? apolloLeads : csvToLeads($('leadCsv').value);
+}
+
+function apolloSearchPayload() {
+  return {
+    titles: listFromInput('targetTitles'),
+    locations: listFromInput('apolloLocations'),
+    industries: listFromInput('targetIndustries'),
+    company_domains: listFromInput('apolloCompanyDomains'),
+    company_names: listFromInput('apolloCompanyNames'),
+    keywords: $('apolloKeywords').value,
+    max_leads: Number($('apolloMaxLeads').value || 10)
+  };
+}
+
+async function searchApolloLeads() {
+  try {
+    setStatus('Searching Apollo leads...');
+    const data = await apiFetch('/leads/apollo/search', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(apolloSearchPayload())
+    });
+    apolloLeads = data.leads || [];
+    renderLeadPreview(apolloLeads, 'Apollo');
+    setStatus(`Imported ${apolloLeads.length} Apollo lead(s). They will be used for the next draft generation.`);
+  } catch (error) {
+    apolloLeads = [];
+    renderLeadPreview([], 'Apollo');
+    setStatus(`Apollo search failed: ${error.message}. CSV fallback is still available.`);
+  }
+}
+
+function renderLeadPreview(leads, sourceLabel) {
+  if (!leads.length) {
+    $('apolloLeadPreview').textContent = `${sourceLabel} lead preview is empty.`;
+    return;
+  }
+  $('apolloLeadPreview').innerHTML = leads.map((lead) => `${escapeHtml(lead.first_name)} ${escapeHtml(lead.last_name)} · ${escapeHtml(lead.title)} · ${escapeHtml(lead.company_name)} · ${escapeHtml(lead.email)}`).join('<br>');
+}
+
 function payload() {
   return {
     company: {
@@ -107,7 +164,7 @@ function payload() {
       target_titles: listFromInput('targetTitles'),
       target_industries: listFromInput('targetIndustries')
     },
-    leads: csvToLeads($('leadCsv').value),
+    leads: selectedLeads(),
     llm_provider: $('llmProvider').value,
     llm_model: $('llmModel').value || null,
     enrich_websites: $('enrichWebsites').checked

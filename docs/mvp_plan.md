@@ -8,12 +8,12 @@ Architecture:
 - JSON file storage for local MVP persistence.
 - CLI demo for generating campaign drafts.
 - FastAPI backend exposing health, LLM provider discovery, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, draft editing, approved local mailbox draft artifact endpoints, and OAuth-backed Gmail/Microsoft Graph draft creation paths.
-- Built-in browser frontend at `/` with static assets under `/assets/` for company/campaign input, LLM provider selection, mailbox OAuth connection status/setup, optional Scrapling/static website enrichment, lead CSV paste, campaign health metrics, draft generation, draft editing, draft approval, and safe local/live mailbox draft creation.
-- Tests cover business profile generation, LLM routing, Scrapling/static enrichment, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, frontend shell and static assets, OAuth setup/status endpoints, approval-gated local mailbox artifacts, and OAuth-backed Gmail/Outlook draft-client wiring.
+- Built-in browser frontend at `/` with static assets under `/assets/` for company/campaign input, LLM provider selection, mailbox OAuth connection status/setup, optional Scrapling/static website enrichment, CSV/Apollo lead sourcing, campaign health metrics, draft generation, draft editing, draft approval, and safe local/live mailbox draft creation.
+- Tests cover business profile generation, LLM routing, Scrapling/static enrichment, Apollo lead normalization/API fallback, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, frontend shell and static assets, OAuth setup/status endpoints, approval-gated local mailbox artifacts, and OAuth-backed Gmail/Outlook draft-client wiring.
 
 MVP scope:
 1. Create an AI-style business profile from plain company details using deterministic local logic as a safe fallback or LLMRouter-backed Codex/Gemini generation.
-2. Normalize manually supplied leads.
+2. Normalize manually supplied or Apollo-sourced leads.
 3. Score leads for country/region/title/company fit.
 4. Generate personalized drafts from a user template and available lead/company context.
 5. Optionally enrich leads with public website title/meta/H1 context before scoring and drafting.
@@ -32,8 +32,9 @@ Development sequence:
 4. Gmail API draft adapter: builds Gmail raw draft payloads and calls an injected OAuth-backed client only after approval. Done.
 5. Outlook/Microsoft Graph draft adapter: builds Graph message JSON and calls an OAuth-backed client only after approval. Done.
 6. First-class OAuth setup/status endpoints and dashboard mailbox connection panel for Gmail and Outlook. Done.
-7. Frontend shell refactored into package static assets with campaign health metrics, review queue interactions, robust CSV parsing, and live/local mailbox draft delivery selection. Started.
-8. ApolloLeadProvider: calls Apollo MCP/API when a paid key has endpoint access, with CSV fallback.
+7. Frontend shell refactored into package static assets with campaign health metrics, review queue interactions, robust CSV parsing, and live/local mailbox draft delivery selection. Done.
+8. ApolloLeadProvider: normalizes Apollo people search results into draft-ready leads, exposes `/leads/apollo/search`, and adds frontend CSV/Apollo lead source switching with CSV fallback. Started.
+9. Campaign history/reopen UI: list saved campaigns, load prior drafts, and continue review/mailbox-draft workflow.
 
 Future intelligence layer: Lead Response Graph
 - Add a graphify-like module inside the app for mapping lead generation, lead attributes, campaigns, email variants, enrichment facts, sent emails, replies, bounces, unsubscribes, and conversions.

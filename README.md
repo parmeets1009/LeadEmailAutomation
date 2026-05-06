@@ -20,7 +20,8 @@ It does not send email. Every draft has `approval_required: true`.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
 - FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, draft review/approval, local draft artifact creation, Gmail/Outlook OAuth setup, mailbox status, and live draft creation.
-- Browser frontend served at `/` with separate static assets under `/assets/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV lead paste, campaign health metrics, draft generation, editing, approval, and mailbox draft creation.
+- Browser frontend served at `/` with separate static assets under `/assets/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV/Apollo lead sourcing, campaign health metrics, draft generation, editing, approval, and mailbox draft creation.
+- ApolloLeadProvider and `/leads/apollo/search` endpoint normalize Apollo people search results into the app's draft-ready lead shape, with CSV fallback when Apollo is not configured.
 - LLMRouter abstraction for deterministic fallback, Codex/OpenAI-compatible, and Gemini/OpenAI-compatible draft/profile generation with safe deterministic fallback when credentials are missing or calls fail.
 - ScraplingEnrichmentProvider for optional public lead-website context extraction, using Scrapling when installed and a safe static HTTP fallback otherwise.
 - GmailApiDraftStore builds Gmail RFC 2822/base64url draft payloads and calls an injected OAuth-backed client only after approval; it still never sends email.
@@ -75,6 +76,7 @@ Available endpoints:
 - `GET /oauth/gmail/start` and `GET /oauth/outlook/start` create provider authorization URLs.
 - `GET /oauth/gmail/callback` and `GET /oauth/outlook/callback` exchange OAuth codes and persist token JSON under `campaign_runs/oauth_tokens/`.
 - `POST /companies/profile` creates a structured business profile from company details.
+- `POST /leads/apollo/search` searches Apollo when configured and returns normalized lead objects compatible with `/campaigns/draft`; when Apollo is not configured, use the CSV fallback.
 - `POST /campaigns/draft` creates draft-first campaign output from company, campaign, and leads payloads. It persists the result to `campaign_runs/{campaign_id}.json`.
 - `GET /campaigns/{campaign_id}` loads a saved campaign result.
 - `GET /campaigns/{campaign_id}/drafts` lists reviewable drafts with stable draft IDs and review status.
