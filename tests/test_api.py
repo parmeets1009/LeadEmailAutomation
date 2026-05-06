@@ -17,6 +17,15 @@ class FakeGmailDraftClient:
         return {"id": "gmail-draft-123", "message_id": "gmail-message-456"}
 
 
+class FakeOutlookDraftClient:
+    def __init__(self):
+        self.messages = []
+
+    def create_draft(self, message: dict) -> dict[str, str]:
+        self.messages.append(message)
+        return {"id": "outlook-draft-789"}
+
+
 class ApiWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.TemporaryDirectory()
@@ -251,6 +260,47 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("From: Maya <maya@acme.example>", decoded)
         self.assertIn("Subject: Potential supply fit for Gulf Industrial Supplies", decoded)
         self.assertIn("industrial maintenance supplies in Dubai", decoded)
+
+    def test_live_outlook_draft_creation_uses_injected_client_after_approval(self):
+        outlook_client = FakeOutlookDraftClient()
+        self.client = TestClient(create_app(storage_dir=Path(self.tmpdir.name), outlook_draft_client=outlook_client))
+        self._create_sample_campaign()
+
+        missing_client = TestClient(create_app(storage_dir=Path(self.tmpdir.name)))
+        not_configured = missing_client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "outlook", "delivery": "outlook_graph"},
+        )
+        self.assertEqual(not_configured.status_code, 503)
+        self.assertEqual(not_configured.json()["detail"], "outlook draft client not configured")
+
+        blocked = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "outlook", "delivery": "outlook_graph"},
+        )
+        self.assertEqual(blocked.status_code, 409)
+
+        self.client.patch(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/approve",
+            json={"approved_by": "parmeet"},
+        )
+        response = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "outlook", "delivery": "outlook_graph"},
+        )
+
+        self.assertEqual(response.status_code, 201)
+        body = response.json()
+        self.assertEqual(body["provider"], "outlook")
+        self.assertEqual(body["status"], "draft_created")
+        self.assertEqual(body["mailbox_draft_id"], "outlook-draft-789")
+        self.assertEqual(body["storage_path"], "outlook_graph")
+        self.assertEqual(len(outlook_client.messages), 1)
+        message = outlook_client.messages[0]
+        self.assertEqual(message["subject"], "Potential supply fit for Gulf Industrial Supplies")
+        self.assertEqual(message["toRecipients"][0]["emailAddress"]["address"], "ahmed@example.ae")
+        self.assertEqual(message["body"]["contentType"], "Text")
+        self.assertIn("industrial maintenance supplies in Dubai", message["body"]["content"])
 
     def test_unknown_draft_review_endpoint_returns_404(self):
         self._create_sample_campaign()

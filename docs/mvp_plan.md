@@ -7,9 +7,9 @@ Architecture:
 - CSV/manual lead import first, with adapter interfaces for Apollo and Scrapling.
 - JSON file storage for local MVP persistence.
 - CLI demo for generating campaign drafts.
-- FastAPI backend exposing health, LLM provider discovery, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, draft editing, approved local mailbox draft artifact endpoints, and an injectable Gmail API draft creation path.
+- FastAPI backend exposing health, LLM provider discovery, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, draft editing, approved local mailbox draft artifact endpoints, and OAuth-backed Gmail/Microsoft Graph draft creation paths.
 - Built-in single-page dashboard at `/` for company/campaign input, LLM provider selection, optional Scrapling/static website enrichment, lead CSV paste, draft generation, draft editing, draft approval, and safe local Gmail/Outlook-shaped draft creation.
-- Tests cover business profile generation, LLM routing, Scrapling/static enrichment, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, dashboard availability, approval-gated local mailbox artifacts, and injected Gmail API draft creation.
+- Tests cover business profile generation, LLM routing, Scrapling/static enrichment, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, dashboard availability, approval-gated local mailbox artifacts, and OAuth-backed Gmail/Outlook draft-client wiring.
 
 MVP scope:
 1. Create an AI-style business profile from plain company details using deterministic local logic as a safe fallback or LLMRouter-backed Codex/Gemini generation.
@@ -21,7 +21,7 @@ MVP scope:
 7. Persist campaign results as JSON.
 8. Support backend review workflow with stable draft IDs, pending/edited/approved states, reviewer notes, and edit persistence.
 9. Create safe provider-shaped Gmail/Outlook local draft artifacts only after explicit draft approval; do not send email.
-10. Build a Gmail API draft adapter that encodes approved drafts as Gmail raw messages and calls an injected OAuth-backed client without sending.
+10. Build Gmail and Outlook API draft adapters that encode approved drafts for Gmail raw messages or Microsoft Graph JSON and call OAuth-backed clients without sending.
 11. Provide a minimal browser dashboard for manually generating, editing, approving, and mailbox-drafting before any live email-sending feature exists.
 12. Preserve model metadata (`llm_provider`, `llm_model`, `prompt_version`) on campaign results for future analytics and auditability.
 
@@ -30,8 +30,8 @@ Development sequence:
 2. ScraplingEnrichmentProvider for public company pages and personalization facts. Done.
 3. Gmail/Outlook draft artifact adapter: creates local provider-shaped drafts only after explicit approval. Done.
 4. Gmail API draft adapter: builds Gmail raw draft payloads and calls an injected OAuth-backed client only after approval. Done.
-5. Wire a production Google OAuth client into the API/server runtime.
-6. Outlook/Microsoft Graph draft adapter behind the same approval boundary.
+5. Outlook/Microsoft Graph draft adapter: builds Graph message JSON and calls an OAuth-backed client only after approval. Done.
+6. Add first-class OAuth setup flows/UI for storing Gmail and Outlook tokens.
 7. ApolloLeadProvider: calls Apollo MCP/API when a paid key has endpoint access, with CSV fallback.
 
 Future intelligence layer: Lead Response Graph

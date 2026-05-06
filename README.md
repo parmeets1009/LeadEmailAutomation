@@ -24,6 +24,7 @@ It does not send email. Every draft has `approval_required: true`.
 - LLMRouter abstraction for deterministic fallback, Codex/OpenAI-compatible, and Gemini/OpenAI-compatible draft/profile generation with safe deterministic fallback when credentials are missing or calls fail.
 - ScraplingEnrichmentProvider for optional public lead-website context extraction, using Scrapling when installed and a safe static HTTP fallback otherwise.
 - GmailApiDraftStore builds Gmail RFC 2822/base64url draft payloads and calls an injected OAuth-backed client only after approval; it still never sends email.
+- OutlookApiDraftStore builds Microsoft Graph message payloads and calls an OAuth-backed Graph client only after approval; it still never sends email.
 
 ## What comes next
 
@@ -73,7 +74,7 @@ Available endpoints:
 - `GET /campaigns/{campaign_id}/drafts` lists reviewable drafts with stable draft IDs and review status.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/approve` marks a draft as approved and stores reviewer notes.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/edit` updates draft subject/body and resets approval status to edited/pending re-approval.
-- `POST /campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts` creates a safe local Gmail/Outlook-shaped draft artifact only after draft approval. With an injected Gmail client, `{ "provider": "gmail", "delivery": "gmail_api" }` creates a real Gmail draft instead of a local artifact.
+- `POST /campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts` creates a safe local Gmail/Outlook-shaped draft artifact only after draft approval. With an injected Gmail client, `{ "provider": "gmail", "delivery": "gmail_api" }` creates a real Gmail draft instead of a local artifact. With an injected Outlook client, `{ "provider": "outlook", "delivery": "outlook_graph" }` creates a real Microsoft Graph draft.
 
 Minimal API example:
 
@@ -146,7 +147,30 @@ curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/
 curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts \
   -H 'Content-Type: application/json' \
   -d '{"provider":"gmail","delivery":"gmail_api"}'
+
+# If the app is started with an injected OAuth-backed Outlook client, create a real Outlook draft
+curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts \
+  -H 'Content-Type: application/json' \
+  -d '{"provider":"outlook","delivery":"outlook_graph"}'
 ```
+
+## OAuth-backed mailbox draft configuration
+
+The default API app auto-loads optional mailbox OAuth clients from environment variables at startup:
+
+- `GMAIL_TOKEN_PATH` or `GOOGLE_TOKEN_PATH`: Google authorized-user token JSON with `https://www.googleapis.com/auth/gmail.compose` scope.
+- `GOOGLE_CLIENT_SECRET_PATH`: optional Google OAuth client secret path, retained for setup tooling/documentation.
+- `OUTLOOK_TOKEN_PATH`: JSON file containing a Microsoft Graph `access_token` with `Mail.ReadWrite` permission.
+- `OUTLOOK_ACCESS_TOKEN`: direct Microsoft Graph access token fallback for development.
+
+When no OAuth variables are present, local draft artifact creation still works and live delivery modes return `503` instead of sending or guessing credentials.
+
+Required OAuth permissions:
+
+- Gmail: `https://www.googleapis.com/auth/gmail.compose`
+- Microsoft Graph delegated permission: `Mail.ReadWrite`
+
+Live draft modes create drafts only. They do not call Gmail send or Microsoft Graph send.
 
 ## Lead CSV columns
 

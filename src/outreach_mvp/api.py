@@ -10,8 +10,9 @@ from pydantic import BaseModel, Field
 from .dashboard import dashboard_html
 from .enrichment import ScraplingEnrichmentProvider
 from .llm import DEFAULT_MODELS, LLMRouter
-from .mailbox import ApprovalRequiredError, GmailApiDraftStore, GmailDraftClient, LocalMailboxDraftStore, UnsupportedMailboxProviderError
+from .mailbox import ApprovalRequiredError, GmailApiDraftStore, GmailDraftClient, LocalMailboxDraftStore, OutlookApiDraftStore, OutlookDraftClient, UnsupportedMailboxProviderError
 from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
+from .oauth_clients import create_mailbox_clients_from_env
 from .orchestrator import DraftFirstOrchestrator
 from .storage import JsonCampaignStore
 
@@ -102,11 +103,21 @@ class MailboxDraftRequest(BaseModel):
     delivery: str = "local"
 
 
-def create_app(storage_dir: Path | str = Path("campaign_runs"), gmail_draft_client: GmailDraftClient | None = None) -> FastAPI:
+def create_app(
+    storage_dir: Path | str = Path("campaign_runs"),
+    gmail_draft_client: GmailDraftClient | None = None,
+    outlook_draft_client: OutlookDraftClient | None = None,
+    load_oauth_clients_from_env: bool = True,
+) -> FastAPI:
     app = FastAPI(title="Lead Email Automation API", version="0.1.0")
     store = JsonCampaignStore(Path(storage_dir))
     mailbox_store = LocalMailboxDraftStore(Path(storage_dir) / "mailbox_drafts")
+    if load_oauth_clients_from_env and (gmail_draft_client is None or outlook_draft_client is None):
+        oauth_clients = create_mailbox_clients_from_env()
+        gmail_draft_client = gmail_draft_client or oauth_clients.gmail
+        outlook_draft_client = outlook_draft_client or oauth_clients.outlook
     gmail_api_store = GmailApiDraftStore(gmail_draft_client) if gmail_draft_client else None
+    outlook_api_store = OutlookApiDraftStore(outlook_draft_client) if outlook_draft_client else None
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard() -> str:
@@ -207,6 +218,12 @@ def create_app(storage_dir: Path | str = Path("campaign_runs"), gmail_draft_clie
                 if gmail_api_store is None:
                     raise HTTPException(status_code=503, detail="gmail draft client not configured")
                 mailbox_result = gmail_api_store.create_draft(result.campaign, draft)
+            elif delivery == "outlook_graph":
+                if provider != "outlook":
+                    raise UnsupportedMailboxProviderError("outlook_graph delivery only supports provider 'outlook'")
+                if outlook_api_store is None:
+                    raise HTTPException(status_code=503, detail="outlook draft client not configured")
+                mailbox_result = outlook_api_store.create_draft(result.campaign, draft)
             elif delivery == "local":
                 mailbox_result = mailbox_store.create_draft(request.provider, result.campaign, draft)
             else:

@@ -31,6 +31,11 @@ class GmailDraftClient(Protocol):
         """Create a Gmail draft from a base64url RFC 2822 message."""
 
 
+class OutlookDraftClient(Protocol):
+    def create_draft(self, message: dict[str, Any]) -> dict[str, Any]:
+        """Create an Outlook/Microsoft Graph draft message."""
+
+
 class MailboxDraftError(Exception):
     pass
 
@@ -120,6 +125,48 @@ class GmailApiDraftStore:
             subject=draft.subject,
             storage_path="gmail_api",
         )
+
+
+class OutlookApiDraftStore:
+    """Live Outlook/Microsoft Graph draft adapter boundary.
+
+    The injected client owns OAuth/token concerns. This adapter enforces the
+    approval gate and builds a Graph message JSON payload. It never sends email.
+    """
+
+    def __init__(self, client: OutlookDraftClient) -> None:
+        self.client = client
+
+    def create_draft(self, campaign: CampaignInput, draft: EmailDraft) -> MailboxDraftResult:
+        if not draft.approved or draft.review_status != "approved":
+            raise ApprovalRequiredError("draft must be approved before mailbox draft creation")
+        message = build_outlook_message(campaign, draft)
+        response = self.client.create_draft(message)
+        mailbox_draft_id = str(response.get("id") or response.get("draft_id") or "")
+        if not mailbox_draft_id:
+            mailbox_draft_id = "outlook-draft-created"
+        return MailboxDraftResult(
+            provider="outlook",
+            status="draft_created",
+            draft_id=draft.draft_id,
+            mailbox_draft_id=mailbox_draft_id,
+            to_email=draft.lead.email,
+            from_email=campaign.sender_email,
+            subject=draft.subject,
+            storage_path="outlook_graph",
+        )
+
+
+def build_outlook_message(campaign: CampaignInput, draft: EmailDraft) -> dict[str, Any]:
+    email_address: dict[str, str] = {"address": draft.lead.email}
+    lead_name = " ".join(part for part in [draft.lead.first_name, draft.lead.last_name] if part).strip()
+    if lead_name:
+        email_address["name"] = lead_name
+    return {
+        "subject": draft.subject,
+        "body": {"contentType": "Text", "content": draft.body},
+        "toRecipients": [{"emailAddress": email_address}],
+    }
 
 
 def build_gmail_raw_message(campaign: CampaignInput, draft: EmailDraft) -> str:
