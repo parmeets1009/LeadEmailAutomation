@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from .dashboard import dashboard_html
 from .enrichment import ScraplingEnrichmentProvider
 from .llm import DEFAULT_MODELS, LLMRouter
-from .mailbox import ApprovalRequiredError, LocalMailboxDraftStore, UnsupportedMailboxProviderError
+from .mailbox import ApprovalRequiredError, GmailApiDraftStore, GmailDraftClient, LocalMailboxDraftStore, UnsupportedMailboxProviderError
 from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
 from .orchestrator import DraftFirstOrchestrator
 from .storage import JsonCampaignStore
@@ -99,12 +99,14 @@ class EditDraftRequest(BaseModel):
 
 class MailboxDraftRequest(BaseModel):
     provider: str
+    delivery: str = "local"
 
 
-def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
+def create_app(storage_dir: Path | str = Path("campaign_runs"), gmail_draft_client: GmailDraftClient | None = None) -> FastAPI:
     app = FastAPI(title="Lead Email Automation API", version="0.1.0")
     store = JsonCampaignStore(Path(storage_dir))
     mailbox_store = LocalMailboxDraftStore(Path(storage_dir) / "mailbox_drafts")
+    gmail_api_store = GmailApiDraftStore(gmail_draft_client) if gmail_draft_client else None
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard() -> str:
@@ -197,7 +199,18 @@ def create_app(storage_dir: Path | str = Path("campaign_runs")) -> FastAPI:
         if draft is None:
             raise HTTPException(status_code=404, detail="draft not found")
         try:
-            mailbox_result = mailbox_store.create_draft(request.provider, result.campaign, draft)
+            delivery = request.delivery.strip().lower()
+            provider = request.provider.strip().lower()
+            if delivery == "gmail_api":
+                if provider != "gmail":
+                    raise UnsupportedMailboxProviderError("gmail_api delivery only supports provider 'gmail'")
+                if gmail_api_store is None:
+                    raise HTTPException(status_code=503, detail="gmail draft client not configured")
+                mailbox_result = gmail_api_store.create_draft(result.campaign, draft)
+            elif delivery == "local":
+                mailbox_result = mailbox_store.create_draft(request.provider, result.campaign, draft)
+            else:
+                raise UnsupportedMailboxProviderError(f"unsupported mailbox delivery '{request.delivery}'")
         except ApprovalRequiredError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except UnsupportedMailboxProviderError as exc:

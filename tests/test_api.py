@@ -1,3 +1,4 @@
+import base64
 import tempfile
 import unittest
 from pathlib import Path
@@ -5,6 +6,15 @@ from pathlib import Path
 from starlette.testclient import TestClient
 
 from outreach_mvp.api import create_app
+
+
+class FakeGmailDraftClient:
+    def __init__(self):
+        self.raw_messages = []
+
+    def create_draft(self, raw_message: str) -> dict[str, str]:
+        self.raw_messages.append(raw_message)
+        return {"id": "gmail-draft-123", "message_id": "gmail-message-456"}
 
 
 class ApiWorkflowTests(unittest.TestCase):
@@ -200,6 +210,47 @@ class ApiWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(outlook.status_code, 201)
         self.assertEqual(outlook.json()["provider"], "outlook")
+
+    def test_live_gmail_draft_creation_uses_injected_client_after_approval(self):
+        gmail_client = FakeGmailDraftClient()
+        self.client = TestClient(create_app(storage_dir=Path(self.tmpdir.name), gmail_draft_client=gmail_client))
+        self._create_sample_campaign()
+
+        missing_client = TestClient(create_app(storage_dir=Path(self.tmpdir.name)))
+        not_configured = missing_client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "gmail", "delivery": "gmail_api"},
+        )
+        self.assertEqual(not_configured.status_code, 503)
+        self.assertEqual(not_configured.json()["detail"], "gmail draft client not configured")
+
+        blocked = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "gmail", "delivery": "gmail_api"},
+        )
+        self.assertEqual(blocked.status_code, 409)
+
+        self.client.patch(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/approve",
+            json={"approved_by": "parmeet"},
+        )
+        response = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts",
+            json={"provider": "gmail", "delivery": "gmail_api"},
+        )
+
+        self.assertEqual(response.status_code, 201)
+        body = response.json()
+        self.assertEqual(body["provider"], "gmail")
+        self.assertEqual(body["status"], "draft_created")
+        self.assertEqual(body["mailbox_draft_id"], "gmail-draft-123")
+        self.assertEqual(body["storage_path"], "gmail_api")
+        self.assertEqual(len(gmail_client.raw_messages), 1)
+        decoded = base64.urlsafe_b64decode(gmail_client.raw_messages[0] + "===").decode("utf-8")
+        self.assertIn("To: ahmed@example.ae", decoded)
+        self.assertIn("From: Maya <maya@acme.example>", decoded)
+        self.assertIn("Subject: Potential supply fit for Gulf Industrial Supplies", decoded)
+        self.assertIn("industrial maintenance supplies in Dubai", decoded)
 
     def test_unknown_draft_review_endpoint_returns_404(self):
         self._create_sample_campaign()

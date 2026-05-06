@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import base64
 import json
 import re
 from dataclasses import dataclass
+from email.message import EmailMessage
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, Protocol
 
 from .models import CampaignInput, EmailDraft, to_plain_data
 
@@ -22,6 +24,11 @@ class MailboxDraftResult:
     from_email: str
     subject: str
     storage_path: str
+
+
+class GmailDraftClient(Protocol):
+    def create_draft(self, raw_message: str) -> dict[str, Any]:
+        """Create a Gmail draft from a base64url RFC 2822 message."""
 
 
 class MailboxDraftError(Exception):
@@ -82,3 +89,51 @@ class LocalMailboxDraftStore:
     def _slug(self, value: str) -> str:
         slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
         return slug or "campaign"
+
+
+class GmailApiDraftStore:
+    """Live Gmail draft adapter boundary.
+
+    The injected client owns OAuth/token concerns. This adapter only enforces
+    the same approval gate as local artifacts and builds the Gmail raw RFC 2822
+    draft payload. It never sends email.
+    """
+
+    def __init__(self, client: GmailDraftClient) -> None:
+        self.client = client
+
+    def create_draft(self, campaign: CampaignInput, draft: EmailDraft) -> MailboxDraftResult:
+        if not draft.approved or draft.review_status != "approved":
+            raise ApprovalRequiredError("draft must be approved before mailbox draft creation")
+        raw_message = build_gmail_raw_message(campaign, draft)
+        response = self.client.create_draft(raw_message)
+        mailbox_draft_id = str(response.get("id") or response.get("draft_id") or "")
+        if not mailbox_draft_id:
+            mailbox_draft_id = "gmail-draft-created"
+        return MailboxDraftResult(
+            provider="gmail",
+            status="draft_created",
+            draft_id=draft.draft_id,
+            mailbox_draft_id=mailbox_draft_id,
+            to_email=draft.lead.email,
+            from_email=campaign.sender_email,
+            subject=draft.subject,
+            storage_path="gmail_api",
+        )
+
+
+def build_gmail_raw_message(campaign: CampaignInput, draft: EmailDraft) -> str:
+    message = EmailMessage()
+    message["To"] = draft.lead.email
+    message["From"] = _format_sender(campaign.sender_name, campaign.sender_email)
+    message["Subject"] = draft.subject
+    message.set_content(draft.body, cte="8bit")
+    return base64.urlsafe_b64encode(message.as_bytes()).decode("ascii").rstrip("=")
+
+
+def _format_sender(sender_name: str, sender_email: str) -> str:
+    name = sender_name.strip()
+    if not name:
+        return sender_email
+    safe_name = name.replace('"', "'")
+    return f'"{safe_name}" <{sender_email}>' if "," in safe_name else f"{safe_name} <{sender_email}>"

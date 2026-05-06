@@ -19,10 +19,11 @@ It does not send email. Every draft has `approval_required: true`.
 - Orchestrator: creates a draft campaign and skips unsafe/low-score leads.
 - JSON persistence.
 - CLI for CSV-to-draft campaign generation.
-- FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, draft review/approval, and approved Gmail/Outlook draft artifact creation.
+- FastAPI backend for health checks, LLM provider discovery, company profiling, campaign draft generation, campaign retrieval, draft review/approval, local draft artifact creation, and injectable Gmail API draft creation.
 - Minimal built-in dashboard at `/` for company/campaign entry, LLM provider selection, optional website enrichment, CSV lead paste, draft generation, editing, approval, and mailbox draft creation.
 - LLMRouter abstraction for deterministic fallback, Codex/OpenAI-compatible, and Gemini/OpenAI-compatible draft/profile generation with safe deterministic fallback when credentials are missing or calls fail.
 - ScraplingEnrichmentProvider for optional public lead-website context extraction, using Scrapling when installed and a safe static HTTP fallback otherwise.
+- GmailApiDraftStore builds Gmail RFC 2822/base64url draft payloads and calls an injected OAuth-backed client only after approval; it still never sends email.
 
 ## What comes next
 
@@ -57,7 +58,10 @@ The dashboard currently supports:
 - pasting lead CSV data;
 - generating draft emails;
 - editing generated subject/body text;
-- approving drafts.
+- approving drafts;
+- creating local Gmail/Outlook-shaped mailbox draft artifacts for approved drafts.
+
+Live Gmail draft creation is implemented as an injectable backend adapter (`GmailApiDraftStore`) for tests and future OAuth wiring, not enabled by the default `uvicorn outreach_mvp.api:app` instance until a Gmail client is configured.
 
 Available endpoints:
 
@@ -69,7 +73,7 @@ Available endpoints:
 - `GET /campaigns/{campaign_id}/drafts` lists reviewable drafts with stable draft IDs and review status.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/approve` marks a draft as approved and stores reviewer notes.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/edit` updates draft subject/body and resets approval status to edited/pending re-approval.
-- `POST /campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts` creates a safe local Gmail/Outlook-shaped draft artifact only after draft approval.
+- `POST /campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts` creates a safe local Gmail/Outlook-shaped draft artifact only after draft approval. With an injected Gmail client, `{ "provider": "gmail", "delivery": "gmail_api" }` creates a real Gmail draft instead of a local artifact.
 
 Minimal API example:
 
@@ -137,6 +141,11 @@ curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/
 curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts \
   -H 'Content-Type: application/json' \
   -d '{"provider":"outlook"}'
+
+# If the app is started with an injected OAuth-backed Gmail client, create a real Gmail draft
+curl -s -X POST http://127.0.0.1:8000/campaigns/uae-distributor-outreach/drafts/draft-1/mailbox-drafts \
+  -H 'Content-Type: application/json' \
+  -d '{"provider":"gmail","delivery":"gmail_api"}'
 ```
 
 ## Lead CSV columns
