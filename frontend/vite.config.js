@@ -10,7 +10,10 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       strictPort: true,
       allowedHosts: true,
-      hmr: { clientPort: 443 },
+      // Disable HMR over the public preview ingress: WebSocket can't tunnel cleanly,
+      // and Vite's failed reconnects trigger full-page reloads in a loop.
+      hmr: false,
+      watch: { usePolling: false },
     },
     define: {
       "import.meta.env.REACT_APP_BACKEND_URL": JSON.stringify(
