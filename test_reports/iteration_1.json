@@ -1,0 +1,43 @@
+{
+  "summary": "Tested outreach_mvp multipage React webapp + FastAPI backend. Backend: 12/12 pytest cases pass against public preview URL covering health, providers, company profile, campaign list/get, full draft generation->approve->edit cycle, mailbox status, OAuth providers, Apollo graceful 503. Frontend: dashboard/sidebar/safety pill render OK, Company Preview returns generated profile, Campaign Builder loads, Leads CSV->Generate drafts navigates to /review/<id>. CRITICAL: ReviewQueue page enters an infinite render+fetch loop ('Maximum update depth exceeded' + thousands of ERR_INSUFFICIENT_RESOURCES) which causes Approve/Save edits to fail with 'Network Error' in the UI even though the corresponding PATCH endpoints work fine when called directly via pytest. Mailboxes page renders correctly with disabled Connect buttons + 'OAuth client: missing' hint (graceful no-OAuth state). Campaigns list page rendered but the seeded 'uae-distributor-outreach' string was not found in initial DOM read - likely just slow render under heavy network noise from review-queue loop bleed-over.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/campaigns/draft", "issue": "Response body returns drafts with empty draft_id ('') even though GET /api/campaigns/{id} returns the same drafts with draft_id='draft-1', 'draft-2'... Inconsistent serialization between create and read paths. Frontend currently navigates to /review/<id> and re-fetches via GET so the user flow tolerates it, but any client relying on POST response would 404 on approve/edit."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ReviewQueue.jsx", "issue": "Infinite render/fetch loop. useCallback `load` depends on `update` from AppState context, but `update` is recreated every render (not memoized). useEffect([load]) re-fires every render, and load() itself calls update({currentCampaignId}) which triggers another render -> runaway loop. Browser console floods with 'Maximum update depth exceeded' and ERR_INSUFFICIENT_RESOURCES, eventually network requests (including PATCH approve/edit) fail with Network Error.", "selector": "ReviewQueue.jsx:29-51", "priority": "CRITICAL"},
+      {"component": "ReviewQueue.jsx Approve/Save", "issue": "Approve action surfaces 'Approve failed: Network Error' due to the loop above (resource exhaustion). Backend PATCH /api/campaigns/{cid}/drafts/{did}/approve verified working via pytest.", "selector": "[data-testid^=\"draft-approve-\"]", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Generate drafts -> Review Queue -> Approve", "issue": "End-to-end fails in browser due to ReviewQueue infinite loop, even though every individual API call succeeds when invoked directly.", "affected_selectors": ["[data-testid=\"leads-generate-drafts\"]", "[data-testid^=\"draft-approve-\"]", "[data-testid^=\"draft-save-\"]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_outreach_api.py", "/app/backend/tests/conftest.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "FIX (critical): ReviewQueue.jsx infinite loop. Smallest fix: remove `update({ currentCampaignId: campaignId })` from inside `load()` (line 37) - it is already handled by the separate useEffect at lines 45-47. Alternatively memoize `update`/`updateSection` in AppState.jsx with useCallback so context value is stable. After fix, re-verify approve/save edits in browser.",
+    "FIX (minor): outreach_mvp draft generation should populate draft_id in the POST /api/campaigns/draft response (same logic the GET endpoint uses to backfill). Keeps client behavior consistent.",
+    "VERIFY: Campaigns list page should render the seeded campaign row (uae-distributor-outreach) immediately on mount; revalidate after the ReviewQueue fix removes the network-resource pressure."
+  ],
+  "critical_code_review_comments": [
+    "AppState.jsx: update() and updateSection() are inline closures recreated on every render. Any consumer that puts them in a useCallback/useEffect dep array will loop. Wrap in useCallback or expose stable refs.",
+    "ReviewQueue.jsx: load() does double duty (fetch + state sync). Move the `update({currentCampaignId})` out of the fetch path; a separate useEffect already does this on paramId change.",
+    "lib/api.js: relies on Vite `define` shim for REACT_APP_BACKEND_URL. Working today via vite.config.js define, but consider using import.meta.env.VITE_* convention for clarity.",
+    "Mailboxes.jsx correctly disables Connect buttons when OAuth client envs are missing - good graceful degradation."
+  ],
+  "updated_files": [
+    "/app/backend/tests/__init__.py",
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_outreach_api.py"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "~70% - all pages load and most flows work; ReviewQueue + dependent approve/edit flows broken by infinite loop"},
+  "test_credentials": "N/A - no auth in this app",
+  "seed_data_creation": "Created TEST 'test-uae-outreach' campaign via POST /api/campaigns/draft during pytest run (persisted at /app/campaign_runs/test-uae-outreach.json). Safe to delete.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test file is /app/backend/tests/test_outreach_api.py. Run with: REACT_APP_BACKEND_URL=<public-url> pytest backend/tests -v --junitxml=/app/test_reports/pytest/pytest_results.xml. Public preview URL: https://06bbb951-fd24-4b25-af48-234830d5b128.preview.emergentagent.com. Re-test focus after fix: open /review/uae-distributor-outreach in browser, verify no console 'Maximum update depth' errors, verify Approve and Save edits PATCH succeed and update counters.",
+  "rca_of_the_issue": "ReviewQueue infinite loop RCA: (1) AppStateProvider returns a fresh value object {state, update, updateSection, reset} on every render because `update` is defined as `(patch) => setState(...)` inline. (2) ReviewQueue destructures `update` and uses it in load = useCallback(..., [campaignId, update]). Since `update` identity changes every render, `load` identity changes every render. (3) useEffect(() => load(), [load]) re-runs on every render. (4) Inside load, `update({currentCampaignId: campaignId})` triggers a setState in the provider, which re-renders the provider, which yields a new `update`, which re-creates `load`, which re-fires the effect -> infinite loop, hitting the network on every cycle. Reproduction: navigate to /review/<any-id>. Mitigation: either (A) remove the redundant update() call from load() (it's already done in a separate useEffect), or (B) wrap update/updateSection in useCallback inside AppStateProvider."
+}

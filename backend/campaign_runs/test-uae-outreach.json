@@ -1,27 +1,25 @@
 {
   "campaign": {
-    "name": "UAE distributor outreach",
+    "name": "TEST UAE outreach",
     "target_country": "United Arab Emirates",
     "target_region": "UAE",
-    "max_drafts": 10,
+    "max_drafts": 5,
     "sender_name": "Maya",
     "sender_email": "maya@acme.example",
-    "template": "Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Would it make sense to send a short catalogue? Best, {{sender_name}}",
+    "template": "Hi {{first_name}}, about {{company_name}}. {{value_prop}}. {{sender_name}}",
     "target_titles": [
       "Procurement Manager",
-      "Sourcing Manager",
-      "Operations Manager"
+      "Sourcing Manager"
     ],
     "target_industries": [
       "Industrial",
-      "Construction",
-      "Manufacturing"
+      "Construction"
     ]
   },
   "business_profile": {
-    "company_name": "Acme Rubber Works",
+    "company_name": "TEST Acme Rubber Works",
     "website": "https://acme.example",
-    "summary": "Acme Rubber Works provides custom rubber products. Rubber products manufacturer for OEMs, industrial distributors, and construction suppliers.",
+    "summary": "TEST Acme Rubber Works provides custom rubber products. Rubber products manufacturer for OEMs and industrial distributors.",
     "product_categories": [
       "Custom rubber products"
     ],
@@ -33,7 +31,6 @@
       "OEM Buyer"
     ],
     "target_industries": [
-      "Construction",
       "Industrial",
       "Manufacturing",
       "Wholesale Distribution"
@@ -52,7 +49,6 @@
       ],
       "organization_locations": [],
       "q_organization_keyword_tags": [
-        "Construction",
         "Industrial",
         "Manufacturing",
         "Wholesale Distribution"
@@ -73,7 +69,7 @@
         "context": "industrial maintenance supplies in Dubai"
       },
       "subject": "Potential supply fit for Gulf Industrial Supplies",
-      "body": "Hi Ahmed, I noticed Gulf Industrial Supplies works in industrial maintenance supplies in Dubai. We manufacture custom rubber products for industrial buyers. Would it make sense to send a short catalogue? Best, Maya\n\nIf this is not relevant, reply 'not relevant' and I will not contact you again.",
+      "body": "Hi Ahmed, about Gulf Industrial Supplies. custom rubber products for industrial buyers. Maya\n\nIf this is not relevant, reply 'not relevant' and I will not contact you again.",
       "personalization_reason": "Personalized using title 'Procurement Manager', company 'Gulf Industrial Supplies', and context 'industrial maintenance supplies in Dubai'.",
       "lead_score": {
         "score": 100,
@@ -91,9 +87,9 @@
       },
       "approval_required": true,
       "draft_id": "draft-1",
-      "review_status": "pending",
-      "approved": false,
-      "approved_by": "",
+      "review_status": "approved",
+      "approved": true,
+      "approved_by": "tester",
       "review_notes": "",
       "edited_by": ""
     },
@@ -109,8 +105,8 @@
         "website": "https://buildright.example",
         "context": "construction materials procurement"
       },
-      "subject": "Potential supply fit for BuildRight UAE",
-      "body": "Hi Sara, I noticed BuildRight UAE works in construction materials procurement. We manufacture custom rubber products for industrial buyers. Would it make sense to send a short catalogue? Best, Maya\n\nIf this is not relevant, reply 'not relevant' and I will not contact you again.",
+      "subject": "TEST_Edited subject",
+      "body": "TEST_Edited body content",
       "personalization_reason": "Personalized using title 'Sourcing Manager', company 'BuildRight UAE', and context 'construction materials procurement'.",
       "lead_score": {
         "score": 100,
@@ -128,16 +124,14 @@
       },
       "approval_required": true,
       "draft_id": "draft-2",
-      "review_status": "pending",
+      "review_status": "edited",
       "approved": false,
       "approved_by": "",
       "review_notes": "",
-      "edited_by": ""
+      "edited_by": "tester"
     }
   ],
-  "skipped": {
-    "bob@example.com": "low_score"
-  },
+  "skipped": {},
   "status": "drafts_ready_for_review",
   "llm_provider": "deterministic",
   "llm_model": "deterministic-v1",
