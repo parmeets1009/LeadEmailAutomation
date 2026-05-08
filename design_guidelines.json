@@ -1,0 +1,103 @@
+{
+  "theme": "dark",
+  "archetype": "Swiss & High-Contrast (Dark Executive Variant)",
+  "typography": {
+    "font_family": {
+      "heading": "Outfit, sans-serif",
+      "body": "IBM Plex Sans, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl tracking-tight font-medium",
+      "h2": "text-2xl md:text-3xl tracking-tight font-medium",
+      "h3": "text-xl md:text-2xl font-medium",
+      "h4": "text-lg md:text-xl font-medium",
+      "body": "text-base leading-relaxed text-gray-300",
+      "small": "text-sm text-gray-400",
+      "overline": "text-xs tracking-[0.2em] uppercase font-semibold text-gray-500"
+    }
+  },
+  "colors": {
+    "background": {
+      "default": "#09090b",
+      "paper": "#121214",
+      "surface": "#18181b"
+    },
+    "text": {
+      "primary": "#fafafa",
+      "secondary": "#a1a1aa",
+      "muted": "#71717a"
+    },
+    "primary": {
+      "DEFAULT": "#2563eb",
+      "hover": "#3b82f6",
+      "foreground": "#ffffff"
+    },
+    "semantic": {
+      "success": "#10b981",
+      "warning": "#f59e0b",
+      "danger": "#ef4444",
+      "info": "#3b82f6"
+    },
+    "border": "#27272a"
+  },
+  "layout": {
+    "style": "Grid Borders (The 'Technical' Look)",
+    "structure": "Sidebar navigation (w-64) with fixed top-bar for global actions/breadcrumbs",
+    "spacing_scale": "Tailwind standard, utilizing p-6 to p-8 for containers to provide breathing room",
+    "grid": "Bento-style or Control Room density depending on the page (e.g., Dashboard uses tight gap-6 Control Room grid, Review Queue uses single-column generous flow)"
+  },
+  "components": {
+    "card": "Flat background (bg-[#121214]), 1px subtle border (border-[#27272a]), no shadow. On hover: slight lift (-translate-y-1), subtle border color lighten.",
+    "button": "Sharp corners or minimal radius (rounded-md), solid vibrant primary for CTAs, transparent with 1px border for secondary. Always include focus:ring-2.",
+    "input": "Shadcn input structure, customized with dark background (bg-[#09090b]), border-border, text-primary. Focus states must have higher contrast ring.",
+    "draft_card": "Review Queue specific: Resembles an email editor layout. Header with To/From/Subject with monospace fonts for email addresses. Body in a well-padded area. Prominent Approve/Skip/Edit actions.",
+    "status_badge": "Subtle background tint (e.g., bg-green-500/10 text-green-400) with 1px border (border-green-500/20). Sharp or slightly rounded corners."
+  },
+  "motion": {
+    "hover": "transition-colors duration-200 ease-in-out",
+    "click": "active:scale-[0.98] transition-transform",
+    "entrance": "fade-in slide-in-from-bottom-2 duration-300"
+  },
+  "accessibility": {
+    "contrast": "Text contrast strictly follows WCAG AA. Interactive elements must have focus states with focus:ring-2.",
+    "reduced_motion": "Wrap animations with @media (prefers-reduced-motion: no-preference) or Tailwind's motion-safe modifier."
+  },
+  "visual_enhancers": {
+    "safety_pill": "Persistent top-nav indicator: 'No auto-send / Human approval required'. Use warning/info colors to ensure it's always visible.",
+    "icons": "lucide-react for consistent, clean, and professional stroke icons.",
+    "borders": "Expose the skeleton of the layout using subtle borders (border-collapse style) to give a technical, data-driven feel."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1755236402930-d88517a84c49?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzJ8MHwxfHNlYXJjaHwxfHxkYXJrJTIwbWluaW1hbCUyMGFic3RyYWN0JTIwdGV4dHVyZXxlbnwwfHx8fDE3NzgyMzkyNDh8MA&ixlib=rb-4.1.0&q=85",
+        "category": "background",
+        "description": "Dark minimal abstract texture, to be used for the login page background or subtle empty state backgrounds."
+      }
+    ]
+  },
+  "testing": {
+    "data_testid_recommendations": [
+      "nav-link-dashboard",
+      "nav-link-leads",
+      "nav-link-campaigns",
+      "nav-link-review",
+      "campaign-builder-submit",
+      "draft-approve-button",
+      "draft-skip-button",
+      "mailbox-connect-gmail",
+      "mailbox-connect-outlook",
+      "safety-pill-indicator"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Build the 7 requested pages (Dashboard, Company Profile, Campaign Builder, Leads, Campaigns, Review Queue, Mailbox Connections) using React, React Router, and Tailwind CSS.",
+    "Maintain the dark aesthetic using the provided colors (e.g., bg-[#09090b]). Do NOT use generic purple or teal gradients.",
+    "Use Outfit for headings and IBM Plex Sans for body text. Install via Google Fonts or similar.",
+    "Use Shadcn UI components but heavily customize them to match the 'Grid Borders / Technical' look (flat, crisp edges, subtle 1px borders, no soft shadows).",
+    "Keep the 'Human approval required' safety pill visible globally, likely in the top-nav.",
+    "Ensure the Review Queue page feels like an email triage interface with clear read/edit/approve flows.",
+    "Add the recommended data-testid attributes to key interactive elements."
+  ]
+}
