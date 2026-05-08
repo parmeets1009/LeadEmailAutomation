@@ -34,13 +34,12 @@ export default function ReviewQueue() {
       const res = await api.get(`/campaigns/${campaignId}`);
       setCampaign(res.data);
       setDrafts(res.data.drafts || []);
-      update({ currentCampaignId: campaignId });
     } catch (e) {
       setError(extractError(e));
     } finally {
       setLoading(false);
     }
-  }, [campaignId, update]);
+  }, [campaignId]);
 
   useEffect(() => {
     if (paramId) update({ currentCampaignId: paramId });

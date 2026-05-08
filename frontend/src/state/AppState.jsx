@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "lea-app-state-v1";
 
@@ -59,23 +59,32 @@ export function AppStateProvider({ children }) {
     } catch (_) {}
   }, [state]);
 
-  const update = (patch) =>
-    setState((prev) =>
-      typeof patch === "function" ? patch(prev) : { ...prev, ...patch }
-    );
+  const update = useCallback(
+    (patch) =>
+      setState((prev) =>
+        typeof patch === "function" ? patch(prev) : { ...prev, ...patch }
+      ),
+    []
+  );
 
-  const updateSection = (section, patch) =>
-    setState((prev) => ({
-      ...prev,
-      [section]: { ...prev[section], ...patch },
-    }));
+  const updateSection = useCallback(
+    (section, patch) =>
+      setState((prev) => ({
+        ...prev,
+        [section]: { ...prev[section], ...patch },
+      })),
+    []
+  );
 
-  const reset = () => setState(defaultState);
+  const reset = useCallback(() => setState(defaultState), []);
+
+  const value = useMemo(
+    () => ({ state, update, updateSection, reset }),
+    [state, update, updateSection, reset]
+  );
 
   return (
-    <AppStateContext.Provider value={{ state, update, updateSection, reset }}>
-      {children}
-    </AppStateContext.Provider>
+    <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
   );
 }
 
