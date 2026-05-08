@@ -3,3 +3,12 @@ __pycache__/
 .venv/
 .env
 campaign_runs/*.tmp
+-e 
+# Environment and credential files
+.env
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
