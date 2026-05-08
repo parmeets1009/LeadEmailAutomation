@@ -27,11 +27,12 @@ It does not send email. Every draft has `approval_required: true`.
 - GmailApiDraftStore builds Gmail RFC 2822/base64url draft payloads and calls an injected OAuth-backed client only after approval; it still never sends email.
 - OutlookApiDraftStore builds Microsoft Graph message payloads and calls an OAuth-backed Graph client only after approval; it still never sends email.
 - OAuth setup endpoints and dashboard mailbox connection panel support Gmail and Outlook connect/status flows.
+- Response-event ledger and Lead Response Graph analytics foundation record manual replies, bounces, unsubscribes, and conversions, then summarize outcomes by title, country, and industry.
 
 ## What comes next
 
 - Deploy behind Traefik on a dedicated app subdomain, e.g. `https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud/` using `deploy/lead-email-compose.yml` and `docs/hostinger-traefik-deploy.md`.
-- Add reply/bounce/unsubscribe sync and lead response graph analytics.
+- Expand response intelligence from manual event capture to mailbox reply/bounce/unsubscribe sync, persistent suppression ledger, and graph-driven ICP recommendations.
 
 ## Test
 
@@ -85,6 +86,9 @@ Available endpoints:
 - `GET /campaigns/{campaign_id}/drafts` lists reviewable drafts with stable draft IDs and review status.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/approve` marks a draft as approved and stores reviewer notes.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/edit` updates draft subject/body and resets approval status to edited/pending re-approval.
+- `POST /campaigns/{campaign_id}/drafts/{draft_id}/events` records a manual response event (`reply`, `bounce`, `unsubscribe`, `conversion`, `not_interested`, or `out_of_office`) for next-stage analytics.
+- `GET /campaigns/{campaign_id}/drafts/{draft_id}/events` lists recorded response events for a draft.
+- `GET /campaigns/{campaign_id}/response-graph` returns graph nodes, edges, and metrics for campaign response intelligence.
 - `POST /campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts` creates a safe local Gmail/Outlook-shaped draft artifact only after draft approval. With an injected Gmail client, `{ "provider": "gmail", "delivery": "gmail_api" }` creates a real Gmail draft instead of a local artifact. With an injected Outlook client, `{ "provider": "outlook", "delivery": "outlook_graph" }` creates a real Microsoft Graph draft.
 
 Minimal API example:

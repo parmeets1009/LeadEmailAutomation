@@ -9,7 +9,7 @@ Architecture:
 - CLI demo for generating campaign drafts.
 - FastAPI backend exposing health, LLM provider discovery, profile, draft campaign, saved campaign retrieval, draft listing, draft approval, draft editing, approved local mailbox draft artifact endpoints, and OAuth-backed Gmail/Microsoft Graph draft creation paths.
 - Built-in browser frontend at `/` with static assets under `/assets/` for company/campaign input, LLM provider selection, mailbox OAuth connection status/setup, optional Scrapling/static website enrichment, CSV/Apollo lead sourcing, campaign history/reopen, campaign health metrics, draft generation, draft editing, draft approval, and safe local/live mailbox draft creation.
-- Tests cover business profile generation, LLM routing, Scrapling/static enrichment, Apollo lead normalization/API fallback, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, frontend shell and static assets, OAuth setup/status endpoints, approval-gated local mailbox artifacts, and OAuth-backed Gmail/Outlook draft-client wiring.
+- Tests cover business profile generation, LLM routing, Scrapling/static enrichment, Apollo lead normalization/API fallback, lead scoring, draft generation, compliance checks, campaign orchestration, API behavior, frontend shell and static assets, OAuth setup/status endpoints, approval-gated local mailbox artifacts, OAuth-backed Gmail/Outlook draft-client wiring, and response-event/Lead Response Graph analytics.
 
 MVP scope:
 1. Create an AI-style business profile from plain company details using deterministic local logic as a safe fallback or LLMRouter-backed Codex/Gemini generation.
@@ -36,6 +36,7 @@ Development sequence:
 8. ApolloLeadProvider: normalizes Apollo people search results into draft-ready leads, exposes `/leads/apollo/search`, and adds frontend CSV/Apollo lead source switching with CSV fallback. Started.
 9. Campaign history/reopen UI: lists saved campaigns, reloads prior drafts into the review queue, and continues review/mailbox-draft workflow. Done.
 10. VPS deployment + Traefik routing for the public app frontend. In progress: deployment compose template and Hostinger/Traefik runbook added for `lead.hermes-agent-2bhv.srv1390211.hstgr.cloud`.
+11. Response-event ledger + Lead Response Graph foundation: manual reply/bounce/unsubscribe/conversion capture, JSONL event audit trail, graph nodes/edges, and response metrics by title/country/industry. Started.
 
 Future intelligence layer: Lead Response Graph
 - Add a graphify-like module inside the app for mapping lead generation, lead attributes, campaigns, email variants, enrichment facts, sent emails, replies, bounces, unsubscribes, and conversions.

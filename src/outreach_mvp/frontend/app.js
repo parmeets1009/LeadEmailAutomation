@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('[data-action="search-apollo"]').addEventListener('click', searchApolloLeads);
   document.querySelector('[data-action="refresh-mailboxes"]').addEventListener('click', loadMailboxStatus);
   document.querySelector('[data-action="refresh-campaign-history"]').addEventListener('click', loadCampaignHistory);
+  document.querySelector('[data-action="load-response-graph"]').addEventListener('click', loadResponseGraph);
   document.querySelectorAll('[data-source-tab]').forEach((button) => {
     button.addEventListener('click', () => switchLeadSource(button.dataset.sourceTab));
   });
@@ -81,6 +82,7 @@ async function openCampaign(campaignId) {
     currentCampaignId = campaignId;
     updateMetrics(campaign.drafts || [], campaign.skipped || {});
     renderDrafts(campaign.drafts || []);
+    await loadResponseGraph();
     setStatus(`Loaded campaign ${campaignId}`, campaign);
   } catch (error) {
     setStatus(`Open campaign failed: ${error.message}`);
@@ -238,6 +240,7 @@ async function generateDrafts() {
     setStatus(`Created ${(data.drafts || []).length} draft(s) with ${data.llm_provider}/${data.llm_model}. Skipped: ${Object.keys(data.skipped || {}).length}`);
     renderDrafts(data.drafts || []);
     await loadCampaignHistory();
+    await loadResponseGraph();
   } catch (error) {
     setStatus(`Draft generation failed: ${error.message}`);
   }
@@ -281,6 +284,12 @@ function renderDrafts(drafts) {
         <button class="secondary" data-draft-id="${escapeAttr(draft.draft_id)}" data-provider="gmail" data-action="create-mailbox-draft">Create Gmail draft</button>
         <button class="secondary" data-draft-id="${escapeAttr(draft.draft_id)}" data-provider="outlook" data-action="create-mailbox-draft">Create Outlook draft</button>
       </div>
+      <div class="draft-actions outcome-actions" aria-label="Manual response outcomes">
+        <button class="secondary small" data-draft-id="${escapeAttr(draft.draft_id)}" data-event-type="reply" data-classification="interested" data-action="record-response-event">Mark reply</button>
+        <button class="secondary small" data-draft-id="${escapeAttr(draft.draft_id)}" data-event-type="bounce" data-classification="hard_bounce" data-action="record-response-event">Mark bounce</button>
+        <button class="secondary small" data-draft-id="${escapeAttr(draft.draft_id)}" data-event-type="unsubscribe" data-classification="opt_out" data-action="record-response-event">Mark unsubscribe</button>
+        <button class="secondary small" data-draft-id="${escapeAttr(draft.draft_id)}" data-event-type="conversion" data-classification="positive_outcome" data-action="record-response-event">Mark conversion</button>
+      </div>
     </div>`).join('');
 
   container.querySelectorAll('[data-action="approve-draft"]').forEach((button) => {
@@ -291,6 +300,9 @@ function renderDrafts(drafts) {
   });
   container.querySelectorAll('[data-action="create-mailbox-draft"]').forEach((button) => {
     button.addEventListener('click', () => createMailboxDraft(button.dataset.draftId, button.dataset.provider));
+  });
+  container.querySelectorAll('[data-action="record-response-event"]').forEach((button) => {
+    button.addEventListener('click', () => recordResponseEvent(button.dataset.draftId, button.dataset.eventType, button.dataset.classification));
   });
 }
 
@@ -340,6 +352,47 @@ async function createMailboxDraft(draftId, provider) {
     setStatus(`${provider} mailbox draft created`, data);
   } catch (error) {
     setStatus(`Mailbox draft creation failed: ${error.message}`);
+  }
+}
+
+async function recordResponseEvent(draftId, eventType, classification) {
+  if (!currentCampaignId) {
+    setStatus('Open or generate a campaign before recording response events.');
+    return;
+  }
+  try {
+    const data = await apiFetch(`/campaigns/${currentCampaignId}/drafts/${draftId}/events`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({event_type: eventType, classification, source: 'dashboard'})
+    });
+    setStatus(`Recorded ${eventType} outcome`, data);
+    await loadResponseGraph();
+  } catch (error) {
+    setStatus(`Response event failed: ${error.message}`);
+  }
+}
+
+async function loadResponseGraph() {
+  const container = $('responseGraph');
+  if (!container) return;
+  if (!currentCampaignId) {
+    container.textContent = 'No campaign selected. Open or generate a campaign to inspect response intelligence.';
+    return;
+  }
+  try {
+    const graph = await apiFetch(`/campaigns/${currentCampaignId}/response-graph`);
+    const metrics = graph.metrics || {};
+    container.innerHTML = `
+      <div class="intelligence-grid">
+        <div><strong>${escapeHtml(metrics.replies || 0)}</strong><span>Replies</span></div>
+        <div><strong>${escapeHtml(metrics.bounces || 0)}</strong><span>Bounces</span></div>
+        <div><strong>${escapeHtml(metrics.unsubscribes || 0)}</strong><span>Unsubscribes</span></div>
+        <div><strong>${escapeHtml(metrics.conversions || 0)}</strong><span>Conversions</span></div>
+      </div>
+      <div class="meta">Reply rate ${escapeHtml(metrics.reply_rate || 0)} · Bounce rate ${escapeHtml(metrics.bounce_rate || 0)} · Graph nodes ${escapeHtml((graph.nodes || []).length)} · edges ${escapeHtml((graph.edges || []).length)}</div>`;
+  } catch (error) {
+    container.textContent = `Response graph failed: ${error.message}`;
   }
 }
 

@@ -17,6 +17,7 @@ from .models import CampaignInput, CompanyInput, LeadInput, to_plain_data
 from .oauth_clients import GmailOAuthDraftClient, OutlookOAuthDraftClient, create_mailbox_clients_from_env
 from .oauth_setup import OAuthConfigurationError, OAuthSetupService, OAuthStateError, create_oauth_setup_service_from_env
 from .orchestrator import DraftFirstOrchestrator
+from .response_graph import LeadResponseGraphBuilder, ResponseEvent, ResponseEventStore, VALID_RESPONSE_EVENT_TYPES
 from .storage import JsonCampaignStore
 
 
@@ -116,6 +117,14 @@ class ApolloLeadSearchRequest(BaseModel):
     max_leads: int = 25
 
 
+class ResponseEventRequest(BaseModel):
+    event_type: str
+    classification: str = ""
+    notes: str = ""
+    occurred_at: str = ""
+    source: str = "manual"
+
+
 def create_app(
     storage_dir: Path | str = Path("campaign_runs"),
     gmail_draft_client: GmailDraftClient | None = None,
@@ -128,6 +137,8 @@ def create_app(
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
     storage_path = Path(storage_dir)
     store = JsonCampaignStore(storage_path)
+    response_event_store = ResponseEventStore(storage_path / "response_events.jsonl")
+    response_graph_builder = LeadResponseGraphBuilder()
     mailbox_store = LocalMailboxDraftStore(storage_path / "mailbox_drafts")
     oauth_service = oauth_service or create_oauth_setup_service_from_env(storage_path)
     if load_oauth_clients_from_env and (gmail_draft_client is None or outlook_draft_client is None):
@@ -277,6 +288,51 @@ def create_app(
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="draft not found") from exc
         return to_plain_data(draft)
+
+    @app.post("/campaigns/{campaign_id}/drafts/{draft_id}/events", status_code=201)
+    def record_response_event(campaign_id: str, draft_id: str, request: ResponseEventRequest) -> dict[str, Any]:
+        try:
+            result = store.load_campaign(campaign_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="campaign not found") from exc
+        draft = next((item for item in result.drafts if item.draft_id == draft_id), None)
+        if draft is None:
+            raise HTTPException(status_code=404, detail="draft not found")
+        event_type = request.event_type.strip().lower()
+        if event_type not in VALID_RESPONSE_EVENT_TYPES:
+            raise HTTPException(status_code=400, detail=f"unsupported response event type '{request.event_type}'")
+        event = ResponseEvent(
+            event_id="",
+            campaign_id=campaign_id,
+            draft_id=draft_id,
+            email=draft.lead.email,
+            event_type=event_type,
+            classification=request.classification,
+            notes=request.notes,
+            occurred_at=request.occurred_at,
+            source=request.source,
+        )
+        return to_plain_data(response_event_store.append(event))
+
+    @app.get("/campaigns/{campaign_id}/drafts/{draft_id}/events")
+    def list_response_events(campaign_id: str, draft_id: str) -> dict[str, Any]:
+        try:
+            result = store.load_campaign(campaign_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="campaign not found") from exc
+        if not any(item.draft_id == draft_id for item in result.drafts):
+            raise HTTPException(status_code=404, detail="draft not found")
+        events = response_event_store.events_for_draft(campaign_id, draft_id)
+        return {"campaign_id": campaign_id, "draft_id": draft_id, "count": len(events), "events": to_plain_data(events)}
+
+    @app.get("/campaigns/{campaign_id}/response-graph")
+    def response_graph(campaign_id: str) -> dict[str, Any]:
+        try:
+            result = store.load_campaign(campaign_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="campaign not found") from exc
+        events = response_event_store.list_events(campaign_id)
+        return response_graph_builder.build(campaign_id, result, events)
 
     @app.post("/campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts", status_code=201)
     def create_mailbox_draft(campaign_id: str, draft_id: str, request: MailboxDraftRequest) -> dict[str, Any]:

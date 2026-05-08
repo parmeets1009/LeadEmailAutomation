@@ -103,6 +103,8 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn('Signal Command Center', html)
         self.assertIn('Human approval gate', html)
         self.assertIn('Trust & compliance', html)
+        self.assertIn('Response Intelligence', html)
+        self.assertIn('/response-graph', html)
 
     def test_frontend_assets_are_served_for_dashboard(self):
         css_response = self.client.get("/assets/app.css")
@@ -121,6 +123,8 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("function openCampaign", js_response.text)
         self.assertIn("Review Queue", js_response.text)
         self.assertIn("Apollo", js_response.text)
+        self.assertIn("function recordResponseEvent", js_response.text)
+        self.assertIn("function loadResponseGraph", js_response.text)
 
     def test_apollo_lead_search_returns_normalized_leads_from_injected_client(self):
         apollo_client = FakeApolloClient()
@@ -260,6 +264,58 @@ class ApiWorkflowTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"count": 0, "campaigns": []})
+
+    def test_response_event_endpoint_records_manual_reply_and_graph_metrics(self):
+        self._create_sample_campaign()
+
+        event_response = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/events",
+            json={"event_type": "reply", "classification": "interested", "notes": "Asked for pricing"},
+        )
+
+        self.assertEqual(event_response.status_code, 201)
+        event = event_response.json()
+        self.assertEqual(event["campaign_id"], "uae-distributor-outreach")
+        self.assertEqual(event["draft_id"], "draft-1")
+        self.assertEqual(event["email"], "ahmed@example.ae")
+        self.assertEqual(event["event_type"], "reply")
+        self.assertEqual(event["classification"], "interested")
+        self.assertTrue(event["event_id"].startswith("evt-"))
+
+        events_response = self.client.get("/campaigns/uae-distributor-outreach/drafts/draft-1/events")
+        self.assertEqual(events_response.status_code, 200)
+        self.assertEqual(events_response.json()["count"], 1)
+
+        graph_response = self.client.get("/campaigns/uae-distributor-outreach/response-graph")
+        self.assertEqual(graph_response.status_code, 200)
+        graph = graph_response.json()
+        self.assertEqual(graph["metrics"]["replies"], 1)
+        self.assertEqual(graph["metrics"]["reply_rate"], 1.0)
+        self.assertEqual(graph["metrics"]["by_title"]["Procurement Manager"]["replies"], 1)
+        self.assertTrue(graph["nodes"])
+        self.assertTrue(graph["edges"])
+
+    def test_response_event_endpoint_rejects_unknown_draft(self):
+        self._create_sample_campaign()
+
+        response = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/missing/events",
+            json={"event_type": "reply", "classification": "interested"},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["detail"], "draft not found")
+
+    def test_response_event_endpoint_rejects_unsupported_event_type(self):
+        self._create_sample_campaign()
+
+        response = self.client.post(
+            "/campaigns/uae-distributor-outreach/drafts/draft-1/events",
+            json={"event_type": "opened", "classification": "tracking_pixel"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("unsupported response event type", response.json()["detail"])
 
     def test_draft_review_workflow_lists_approves_and_edits_drafts(self):
         self._create_sample_campaign()

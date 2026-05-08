@@ -34,7 +34,7 @@
     </header>
 
     <main id="mainContent" tabindex="-1">
-      <!-- API route examples used by this dashboard: /campaigns, /campaigns/draft, /leads/apollo/search, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start, mailbox-drafts -->
+      <!-- API route examples used by this dashboard: /campaigns, /campaigns/draft, /leads/apollo/search, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /campaigns/{campaign_id}/drafts/draft-1/events, /campaigns/{campaign_id}/response-graph, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start, mailbox-drafts -->
       <section class="hero panel" aria-labelledby="heroTitle">
         <div class="hero-copy">
           <p class="eyebrow">Signal Command Center</p>
@@ -224,6 +224,18 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
           </div>
           <div id="status" class="status" role="status" aria-live="polite">Ready.</div>
           <div id="drafts" class="draft-list"></div>
+        </article>
+
+        <article class="card span-12 intelligence-panel">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Response Intelligence</p>
+              <h2>Lead Response Graph</h2>
+              <p class="section-subtitle">Record manual outcomes and inspect early reply, bounce, unsubscribe, and conversion signals by title, country, and industry.</p>
+            </div>
+            <button class="secondary small" data-action="load-response-graph">Refresh intelligence</button>
+          </div>
+          <div id="responseGraph" class="status">No response graph loaded yet. Open a campaign, then record reply/bounce/unsubscribe events from draft cards.</div>
         </article>
       </section>
     </main>
