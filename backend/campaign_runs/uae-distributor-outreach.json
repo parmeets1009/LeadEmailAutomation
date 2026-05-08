@@ -1,0 +1,94 @@
+{
+  "campaign": {
+    "name": "UAE distributor outreach",
+    "target_country": "United Arab Emirates",
+    "target_region": "UAE",
+    "max_drafts": 5,
+    "sender_name": "Maya",
+    "sender_email": "maya@acme.example",
+    "template": "Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Best, {{sender_name}}",
+    "target_titles": [
+      "Procurement Manager"
+    ],
+    "target_industries": [
+      "Industrial"
+    ]
+  },
+  "business_profile": {
+    "company_name": "Acme Rubber Works",
+    "website": "https://acme.example",
+    "summary": "Acme Rubber Works provides custom rubber products. Rubber products manufacturer",
+    "product_categories": [
+      "Custom rubber products"
+    ],
+    "buyer_personas": [
+      "Procurement Manager",
+      "Sourcing Manager",
+      "Operations Manager"
+    ],
+    "target_industries": [
+      "Industrial",
+      "Manufacturing"
+    ],
+    "value_propositions": [
+      "custom rubber products for industrial buyers",
+      "direct manufacturer supply with consistent quality"
+    ],
+    "suggested_apollo_filters": {
+      "person_titles": [
+        "Procurement Manager",
+        "Sourcing Manager",
+        "Operations Manager"
+      ],
+      "organization_locations": [],
+      "q_organization_keyword_tags": [
+        "Industrial",
+        "Manufacturing"
+      ]
+    }
+  },
+  "drafts": [
+    {
+      "lead": {
+        "first_name": "Ahmed",
+        "last_name": "Khan",
+        "email": "ahmed@example.ae",
+        "title": "Procurement Manager",
+        "company_name": "Gulf Industrial",
+        "country": "United Arab Emirates",
+        "industry": "Industrial",
+        "website": "https://gulf.example",
+        "context": "industrial maintenance"
+      },
+      "subject": "Potential supply fit for Gulf Industrial",
+      "body": "Hi Ahmed, I noticed Gulf Industrial works in industrial maintenance. We manufacture custom rubber products for industrial buyers. Best, Maya\n\nIf this is not relevant, reply 'not relevant' and I will not contact you again.",
+      "personalization_reason": "Personalized using title 'Procurement Manager', company 'Gulf Industrial', and context 'industrial maintenance'.",
+      "lead_score": {
+        "score": 100,
+        "reasons": [
+          "country_match",
+          "title_match",
+          "industry_match",
+          "has_website",
+          "has_context"
+        ]
+      },
+      "compliance": {
+        "status": "passed",
+        "reasons": []
+      },
+      "approval_required": true,
+      "draft_id": "draft-1",
+      "review_status": "pending",
+      "approved": false,
+      "approved_by": "",
+      "review_notes": "",
+      "edited_by": ""
+    }
+  ],
+  "skipped": {},
+  "status": "drafts_ready_for_review",
+  "llm_provider": "deterministic",
+  "llm_model": "deterministic-v1",
+  "prompt_version": "draft-first-v1"
+}
