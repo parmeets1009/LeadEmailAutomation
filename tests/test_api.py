@@ -99,6 +99,10 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn('/assets/app.js', html)
         self.assertIn('Campaign Health', html)
         self.assertIn('Review Queue', html)
+        self.assertIn('skip-link', html)
+        self.assertIn('Signal Command Center', html)
+        self.assertIn('Human approval gate', html)
+        self.assertIn('Trust & compliance', html)
 
     def test_frontend_assets_are_served_for_dashboard(self):
         css_response = self.client.get("/assets/app.css")

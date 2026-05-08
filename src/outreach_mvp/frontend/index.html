@@ -6,32 +6,47 @@
   <title>Lead Email Automation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
 <body>
+  <a class="skip-link" href="#mainContent">Skip to main content</a>
   <div class="dashboard-shell">
-    <header class="topbar">
-      <div>
-        <div class="eyebrow">Draft-first outreach cockpit</div>
-        <div class="brand">Lead Email Automation</div>
-      </div>
-      <div class="topbar-actions">
+    <header class="topbar" aria-label="Primary">
+      <a class="brand-lockup" href="#mainContent" aria-label="Lead Email Automation dashboard home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-9Zm2.2-.4 5.3 4.2a.8.8 0 0 0 1 0l5.3-4.2a1 1 0 0 0-.3-.1h-11a1 1 0 0 0-.3.1Zm11.8 2.1-4.4 3.5a2.6 2.6 0 0 1-3.2 0L6 9.2v7.3a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V9.2Z"/></svg>
+        </span>
+        <span>
+          <span class="eyebrow">Draft-first outreach cockpit</span>
+          <span class="brand">Lead Email Automation</span>
+        </span>
+      </a>
+      <nav class="topbar-nav" aria-label="Dashboard sections">
+        <a href="#builder">Builder</a>
+        <a href="#leadSource">Leads</a>
+        <a href="#reviewQueue">Review</a>
+      </nav>
+      <div class="topbar-actions" aria-label="Safety guarantees">
         <span class="pill safe">No auto-send</span>
-        <span class="pill">Human approval required</span>
+        <span class="pill">Human approval gate</span>
       </div>
     </header>
 
-    <main>
+    <main id="mainContent" tabindex="-1">
       <!-- API route examples used by this dashboard: /campaigns, /campaigns/draft, /leads/apollo/search, /campaigns/{campaign_id}/drafts/draft-1/approve, /campaigns/{campaign_id}/drafts/draft-1/edit, /mailboxes/status, /oauth/gmail/start, /oauth/outlook/start, mailbox-drafts -->
-      <section class="hero panel">
-        <div>
-          <p class="eyebrow">Campaign workspace</p>
-          <h1>Create, review, and approve personalized outreach drafts.</h1>
-          <p>Enter your company profile, target ICP, and lead CSV. The backend generates safe drafts, then you edit and approve them before local or live mailbox draft creation.</p>
+      <section class="hero panel" aria-labelledby="heroTitle">
+        <div class="hero-copy">
+          <p class="eyebrow">Signal Command Center</p>
+          <h1 id="heroTitle">Personalized outreach, staged safely as reviewable drafts.</h1>
+          <p class="hero-text">Build ICP-driven campaigns, import leads from CSV or Apollo, generate compliant messages, and approve each email before Gmail or Outlook draft creation.</p>
+          <div class="hero-actions">
+            <a class="button-like primary" href="#builder">Build campaign</a>
+            <a class="button-like secondary" href="#reviewQueue">Open review queue</a>
+          </div>
         </div>
-        <div class="hero-metrics" aria-label="Campaign Health">
-          <div class="metric-card">
+        <div class="hero-side" aria-label="Campaign Health">
+          <div class="metric-card featured">
             <span id="metricDrafts">0</span>
             <small>Drafts ready</small>
           </div>
@@ -43,22 +58,35 @@
             <span id="metricSkipped">0</span>
             <small>Skipped</small>
           </div>
+          <div class="trust-card">
+            <p class="eyebrow">Trust & compliance</p>
+            <strong>Draft-first by design</strong>
+            <span>Mailbox integrations only create drafts after a reviewer approves the message.</span>
+          </div>
         </div>
       </section>
 
-      <section class="grid">
-        <article class="card span-5">
+      <section class="workflow-strip" aria-label="Campaign workflow">
+        <div><span>01</span><strong>Profile</strong><small>Describe your offer</small></div>
+        <div><span>02</span><strong>Target</strong><small>Define ICP and region</small></div>
+        <div><span>03</span><strong>Import</strong><small>CSV or Apollo leads</small></div>
+        <div><span>04</span><strong>Review</strong><small>Edit and approve drafts</small></div>
+      </section>
+
+      <section id="builder" class="grid" aria-label="Campaign builder">
+        <article class="card span-5 accent-card">
           <div class="section-title">
             <div>
               <p class="eyebrow">Step 1</p>
               <h2>Company Profile</h2>
+              <p class="section-subtitle">Ground personalization in your company, product categories, and buyer value proposition.</p>
             </div>
             <button class="secondary small" data-action="profile-company">Preview Profile</button>
           </div>
           <label for="companyName">Company name</label>
-          <input id="companyName" value="Acme Rubber Works" />
+          <input id="companyName" value="Acme Rubber Works" autocomplete="organization" />
           <label for="companyWebsite">Website</label>
-          <input id="companyWebsite" value="https://acme.example" />
+          <input id="companyWebsite" value="https://acme.example" inputmode="url" autocomplete="url" />
           <label for="companyDescription">Description</label>
           <textarea id="companyDescription">Rubber products manufacturer for OEMs, industrial distributors, and construction suppliers.</textarea>
         </article>
@@ -68,6 +96,7 @@
             <div>
               <p class="eyebrow">Step 2</p>
               <h2>Campaign Builder</h2>
+              <p class="section-subtitle">Set region, sender, model, targeting, and enrichment controls.</p>
             </div>
             <span class="badge">LLM provider selectable</span>
           </div>
@@ -80,8 +109,8 @@
             <div><label for="maxDrafts">Max drafts</label><input id="maxDrafts" type="number" min="1" max="50" value="10" /></div>
           </div>
           <div class="row">
-            <div><label for="senderName">Sender name</label><input id="senderName" value="Maya" /></div>
-            <div><label for="senderEmail">Sender email</label><input id="senderEmail" value="maya@acme.example" /></div>
+            <div><label for="senderName">Sender name</label><input id="senderName" value="Maya" autocomplete="name" /></div>
+            <div><label for="senderEmail">Sender email</label><input id="senderEmail" value="maya@acme.example" type="email" autocomplete="email" /></div>
           </div>
           <div class="row">
             <div>
@@ -98,11 +127,11 @@
             <div><label for="targetTitles">Target titles</label><input id="targetTitles" value="Procurement Manager, Sourcing Manager, Operations Manager" /></div>
             <div><label for="targetIndustries">Target industries</label><input id="targetIndustries" value="Industrial, Construction, Manufacturing" /></div>
           </div>
-          <label class="checkbox"><input id="enrichWebsites" type="checkbox" />Enrich lead websites with Scrapling/static fetch</label>
+          <label class="checkbox"><input id="enrichWebsites" type="checkbox" /> <span>Enrich lead websites with Scrapling/static fetch</span></label>
         </article>
 
-        <article class="card span-12">
-          <div class="section-title">
+        <article class="card span-6">
+          <div class="section-title compact">
             <div>
               <p class="eyebrow">Campaign History</p>
               <h2>Open Existing Campaign</h2>
@@ -112,54 +141,56 @@
           <div id="campaignHistory" class="status">No saved campaigns loaded yet.</div>
         </article>
 
-        <article class="card span-12">
-          <div class="section-title">
+        <article class="card span-6">
+          <div class="section-title compact">
             <div>
               <p class="eyebrow">Mailbox Connections</p>
               <h2>Connect Gmail or Outlook</h2>
             </div>
             <button class="secondary small" data-action="refresh-mailboxes">Refresh status</button>
           </div>
-          <p>Live integrations create drafts only after approval. Local Gmail/Outlook-shaped artifacts still work without OAuth.</p>
+          <p class="section-subtitle">Live integrations create drafts only after approval. Local Gmail/Outlook-shaped artifacts still work without OAuth.</p>
           <div class="mailbox-grid">
             <div class="mailbox-card">
-              <div id="gmailStatus" class="status">Gmail: checking...</div>
+              <div id="gmailStatus" class="status compact-status">Gmail: checking...</div>
               <button class="secondary" data-provider="gmail" data-action="connect-mailbox">Connect Gmail</button>
             </div>
             <div class="mailbox-card">
-              <div id="outlookStatus" class="status">Outlook: checking...</div>
+              <div id="outlookStatus" class="status compact-status">Outlook: checking...</div>
               <button class="secondary" data-provider="outlook" data-action="connect-mailbox">Connect Outlook</button>
             </div>
           </div>
         </article>
 
-        <article class="card span-6">
+        <article class="card span-5">
           <p class="eyebrow">Step 3</p>
           <h2>Email Template</h2>
+          <p class="section-subtitle">Use tokens to keep drafting consistent while preserving human editing control.</p>
           <textarea id="template" class="large">Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Would it make sense to send a short catalogue? Best, {{sender_name}}</textarea>
         </article>
 
-        <article class="card span-12">
+        <article id="leadSource" class="card span-7">
           <div class="section-title">
             <div>
               <p class="eyebrow">Step 4</p>
               <h2>Lead Source / Lead CSV</h2>
+              <p class="section-subtitle">Paste validated leads or search Apollo with the campaign ICP.</p>
             </div>
             <button data-action="generate-drafts">Generate Drafts</button>
           </div>
-          <div class="source-tabs">
-            <button class="secondary small active" data-source-tab="csv">Paste CSV</button>
-            <button class="secondary small" data-source-tab="apollo">Search Apollo</button>
+          <div class="source-tabs" role="tablist" aria-label="Lead source">
+            <button class="secondary small active" data-source-tab="csv" type="button">Paste CSV</button>
+            <button class="secondary small" data-source-tab="apollo" type="button">Search Apollo</button>
           </div>
           <div id="csvLeadSource" class="lead-source-panel">
-            <p>Paste CSV with columns: first_name,last_name,email,title,company_name,country,industry,website,context</p>
+            <p class="helper-text">Paste CSV with columns: first_name,last_name,email,title,company_name,country,industry,website,context</p>
             <textarea id="leadCsv" class="large">first_name,last_name,email,title,company_name,country,industry,website,context
 Ahmed,Khan,ahmed@example.ae,Procurement Manager,Gulf Industrial Supplies,United Arab Emirates,Industrial,https://gulf.example,industrial maintenance supplies in Dubai
 Sara,Noor,sara@example.ae,Sourcing Manager,BuildRight UAE,UAE,Construction,https://buildright.example,construction materials procurement
 Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,https://retail.example,consumer retail</textarea>
           </div>
           <div id="apolloLeadSource" class="lead-source-panel hidden">
-            <p>Search Apollo using the campaign ICP. If Apollo is not configured, keep using the CSV fallback.</p>
+            <p class="helper-text">Search Apollo using the campaign ICP. If Apollo is not configured, keep using the CSV fallback.</p>
             <div class="row">
               <div><label for="apolloLocations">Apollo locations</label><input id="apolloLocations" value="United Arab Emirates" /></div>
               <div><label for="apolloMaxLeads">Max Apollo leads</label><input id="apolloMaxLeads" type="number" min="1" max="100" value="10" /></div>
@@ -175,13 +206,15 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
           </div>
         </article>
 
-        <article class="card span-12 review-panel">
+        <article id="reviewQueue" class="card span-12 review-panel">
           <div class="section-title">
             <div>
               <p class="eyebrow">Review Queue</p>
               <h2>Draft Review</h2>
+              <p class="section-subtitle">Approve, revise, and hand off to Gmail or Outlook only when the message is ready.</p>
             </div>
             <div class="review-actions">
+              <label class="sr-only" for="mailboxDelivery">Mailbox delivery mode</label>
               <select id="mailboxDelivery">
                 <option value="local">Local artifact</option>
                 <option value="gmail_api">Live Gmail draft</option>
@@ -189,7 +222,7 @@ Bob,Smith,bob@example.com,Marketing Manager,US Retail Co,United States,Retail,ht
               </select>
             </div>
           </div>
-          <div id="status" class="status">Ready.</div>
+          <div id="status" class="status" role="status" aria-live="polite">Ready.</div>
           <div id="drafts" class="draft-list"></div>
         </article>
       </section>
