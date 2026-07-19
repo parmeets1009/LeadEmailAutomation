@@ -42,11 +42,19 @@ regenerated `frontend/dist/` files.
    `cd /opt/lead-email && git pull && systemctl restart lead-email`.
    `docs/hostinger-traefik-deploy.md` (Traefik variant) remains for a future
    dedicated host.
-3. **UI for the Phase 3 features** — sending, sequences (advance/mark-sent),
-   reply sync, ICP, and deliverability exist as API endpoints only (all listed in
-   README.md). Build ReviewQueue send/mark-sent buttons, a Sequences view, and a
-   deliverability widget on Mailboxes. Follow the existing component classes; do
-   not reintroduce generic AI styling.
+3. **UI for the Phase 3 features — DONE (2026-07-19).** Every backend surface now
+   has a front door: Review Queue has Send (auto-send campaigns), Mark-sent,
+   Generate-due-follow-ups, bulk approve, sent/replied/follow-up badges, and a
+   skipped-leads panel; Campaign Builder has delivery mode + score threshold +
+   a 3-stage follow-up builder; a new **Compliance** page shows the suppression
+   list + manual opt-out + contacted count; the Dashboard shows the full
+   sourced→drafts→approved→sent→replied funnel + suppression; Mailboxes has a
+   deliverability (SPF/DKIM/DMARC) checker and reply-sync buttons. The
+   always-blank profile-preview bug and the breadcrumb bug are fixed. New backend
+   endpoints: `GET /compliance/overview`, `POST /compliance/suppress`; campaign
+   list rows carry sent_count/replied_count/delivery_mode. Remaining UI polish
+   (lower priority): CSV file upload (paste works), per-page mobile responsiveness,
+   campaign delete/archive, real user accounts (state is still localStorage).
 4. **First real campaign** — ≤20 leads, draft mode, per `docs/deliverability-checklist.md`.
 5. **Later:** Mongo migration trigger (§7.3), `feat/ui-ux-pro-redesign` branch
    review (predates this work — cherry-pick ideas only, do NOT merge blind over
