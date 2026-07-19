@@ -40,16 +40,28 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Campaign workspace"
-        title="Create, review, and approve personalized outreach drafts."
-        description="Define your company, target ICP, and lead source. The backend generates safe drafts; you edit and approve them before any local or live mailbox draft creation."
-        actions={
-          <Link to="/leads" className="btn-primary" data-testid="dashboard-cta-generate">
-            <Sparkles size={16} /> Generate drafts <ArrowRight size={14} />
-          </Link>
-        }
-      />
+      <div className="relative overflow-hidden panel mb-8 px-6 pt-6 md:px-8 md:pt-8">
+        {/* Decorative tide artwork (Canva-generated texture) — pure décor. */}
+        <img
+          src="/tide-art.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute inset-y-0 right-0 h-full w-64 object-cover hidden lg:block"
+          style={{ maskImage: "linear-gradient(to left, black 55%, transparent)", WebkitMaskImage: "linear-gradient(to left, black 55%, transparent)" }}
+        />
+        <div className="relative max-w-2xl">
+          <PageHeader
+            eyebrow="Campaign workspace"
+            title="Create, review, and approve personalized outreach drafts."
+            description="Define your company, target ICP, and lead source. The backend generates safe drafts; you edit and approve them before any local or live mailbox draft creation."
+            actions={
+              <Link to="/leads" className="btn-primary" data-testid="dashboard-cta-generate">
+                <Sparkles size={16} /> Generate drafts <ArrowRight size={14} />
+              </Link>
+            }
+          />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
         <Metric icon={FileText} label="Drafts created" value={totals.drafts} testid="metric-drafts" />

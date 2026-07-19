@@ -21,15 +21,6 @@ const NAV = [
   { to: "/mailboxes", label: "Mailboxes", icon: Mailbox, testid: "nav-link-mailboxes" },
 ];
 
-function Monogram() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true" className="shrink-0">
-      <rect width="32" height="32" rx="6" fill="#1d1a16" stroke="#3d372f" />
-      <path d="M8 24V8h3.2l9.6 11.4V8H24v16h-3.2L11.2 12.6V24H8z" fill="#c29a5b" />
-    </svg>
-  );
-}
-
 export default function Layout({ children }) {
   const location = useLocation();
   const current = NAV.find(
@@ -38,21 +29,23 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-ink-900 text-zinc-100">
-      <aside className="w-64 shrink-0 border-r border-line bg-ink-900 flex flex-col">
+      <aside className="w-64 shrink-0 border-r border-line bg-white flex flex-col">
         <div className="px-5 pt-6 pb-5 border-b border-line">
-          <div className="flex items-center gap-3">
-            <Monogram />
-            <div className="min-w-0">
-              <div className="text-[10px] tracking-overline uppercase font-semibold text-cobalt-400">
-                Novatide · Outreach Desk
-              </div>
-              <div
-                className="font-display text-[17px] font-medium leading-tight text-zinc-100"
-                data-testid="app-brand"
-              >
-                Lead Email Automation
-              </div>
-            </div>
+          {/* Official Novatide logo — sourced from brand assets, never redrawn. */}
+          <img
+            src="/novatide-logo.png"
+            alt="Novatide Consulting"
+            className="h-14 w-auto mb-3"
+            data-testid="app-logo"
+          />
+          <div className="text-[10px] tracking-overline uppercase font-semibold text-cobalt-500">
+            Outreach Desk
+          </div>
+          <div
+            className="font-display text-[17px] font-medium leading-tight text-zinc-100"
+            data-testid="app-brand"
+          >
+            Lead Email Automation
           </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5">
@@ -67,8 +60,8 @@ export default function Layout({ children }) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 text-sm rounded-sm border-l-2 transition-colors ${
                     isActive
-                      ? "border-cobalt-500 bg-ink-700 text-zinc-50"
-                      : "border-transparent text-zinc-400 hover:text-zinc-100 hover:bg-ink-800"
+                      ? "border-cobalt-600 bg-ink-700 text-zinc-50 font-medium"
+                      : "border-transparent text-zinc-400 hover:text-zinc-100 hover:bg-ink-900"
                   }`
                 }
               >
@@ -94,7 +87,7 @@ export default function Layout({ children }) {
             <span className="text-xs uppercase tracking-overline text-zinc-500">
               {current ? "Workspace" : "Page"}
             </span>
-            <span className="text-line2">/</span>
+            <span className="text-zinc-700">/</span>
             <span className="text-sm font-medium text-zinc-200 truncate">
               {current?.label || "Lead Email Automation"}
             </span>
