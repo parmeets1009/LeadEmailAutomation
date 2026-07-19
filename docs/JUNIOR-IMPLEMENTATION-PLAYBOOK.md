@@ -32,10 +32,16 @@ regenerated `frontend/dist/` files.
    drafts for a non-rubber company); then Apollo (`APOLLO_API_KEY`, §5 checklist),
    then Google/Microsoft OAuth app registration + mailbox connect + one real
    draft→approve→mailbox-draft cycle, then reply-sync against a real inbox.
-2. **Deploy** — follow `docs/hostinger-traefik-deploy.md` exactly (it was
-   rewritten for the port-8001 bridge and `--env-file`; the old guide's
-   assumptions were verified stale). The app REFUSES to boot without
-   `UNSUBSCRIBE_SECRET` when `APP_BASE_URL` is set — that is intentional.
+2. **Deploy — DONE (2026-07-19).** Live at **https://outreach.novatide.app** on
+   the shared Hostinger VPS `200.97.163.52` (same box as the SRPPL IMS and the
+   Zerodha app) — NOT via the Traefik compose file: nginx vhost + certbot +
+   systemd `lead-email.service` (uvicorn bridge on 127.0.0.1:8101,
+   app in `/opt/lead-email`, secrets in `/opt/lead-email/.env`, Basic Auth
+   creds in `/root/lead-email-credentials.txt`, public `/api/u/` unauthenticated,
+   nightly campaign_runs backup cron). Update flow: `git push` → SSH
+   `cd /opt/lead-email && git pull && systemctl restart lead-email`.
+   `docs/hostinger-traefik-deploy.md` (Traefik variant) remains for a future
+   dedicated host.
 3. **UI for the Phase 3 features** — sending, sequences (advance/mark-sent),
    reply sync, ICP, and deliverability exist as API endpoints only (all listed in
    README.md). Build ReviewQueue send/mark-sent buttons, a Sequences view, and a
