@@ -1,21 +1,37 @@
 from __future__ import annotations
 
+import logging
 import os
-from typing import Any, Protocol
+import time
+from dataclasses import dataclass, field
+from typing import Any, Callable, Protocol
 
 import httpx
 
 from .models import LeadInput
+
+logger = logging.getLogger("outreach_mvp.apollo")
+
+MAX_PAGES = 20  # hard safety bound on pagination
 
 
 class ApolloSearchClient(Protocol):
     def search_people(self, *, filters: dict[str, Any], page: int, per_page: int) -> dict[str, Any]: ...
 
 
+class ApolloProviderNotConfigured(RuntimeError):
+    pass
+
+
+class ApolloRateLimited(RuntimeError):
+    pass
+
+
 class ApolloRestClient:
-    def __init__(self, api_key: str | None = None, base_url: str = "https://api.apollo.io/api/v1"):
+    def __init__(self, api_key: str | None = None, base_url: str = "https://api.apollo.io/api/v1", sleep: Callable[[float], None] = time.sleep):
         self.api_key = api_key or os.getenv("APOLLO_API_KEY", "")
         self.base_url = base_url.rstrip("/")
+        self.sleep = sleep
 
     def search_people(self, *, filters: dict[str, Any], page: int, per_page: int) -> dict[str, Any]:
         if not self.api_key:
@@ -33,18 +49,33 @@ class ApolloRestClient:
             payload["organization_names"] = filters["company_names"]
         if filters.get("keywords"):
             payload["q_keywords"] = filters["keywords"]
-        response = httpx.post(
-            f"{self.base_url}/mixed_people/search",
-            headers={"Cache-Control": "no-cache", "Content-Type": "application/json", "X-Api-Key": self.api_key},
-            json=payload,
-            timeout=30,
-        )
-        response.raise_for_status()
-        return response.json()
+        for attempt in (1, 2):
+            response = httpx.post(
+                f"{self.base_url}/mixed_people/search",
+                headers={"Cache-Control": "no-cache", "Content-Type": "application/json", "X-Api-Key": self.api_key},
+                json=payload,
+                timeout=30,
+            )
+            if response.status_code == 429:
+                if attempt == 2:
+                    raise ApolloRateLimited("Apollo rate limited — try again later")
+                try:
+                    wait = int(response.headers.get("retry-after", "60") or "60")
+                except ValueError:
+                    wait = 60
+                logger.warning("Apollo 429; sleeping %ss before one retry", wait)
+                self.sleep(wait)
+                continue
+            response.raise_for_status()
+            return response.json()
+        raise ApolloRateLimited("Apollo rate limited — try again later")
 
 
-class ApolloProviderNotConfigured(RuntimeError):
-    pass
+@dataclass(frozen=True)
+class ApolloSearchResult:
+    leads: list[LeadInput] = field(default_factory=list)
+    locked_email_count: int = 0
+    pages_fetched: int = 0
 
 
 class ApolloLeadProvider:
@@ -67,7 +98,7 @@ class ApolloLeadProvider:
         company_names: list[str] | None = None,
         keywords: str = "",
         max_leads: int = 25,
-    ) -> list[LeadInput]:
+    ) -> ApolloSearchResult:
         if self.client is None:
             raise ApolloProviderNotConfigured("Apollo lead provider is not configured")
         filters = {
@@ -78,14 +109,42 @@ class ApolloLeadProvider:
             "company_names": company_names or [],
             "keywords": keywords,
         }
-        data = self.client.search_people(filters=filters, page=1, per_page=max(1, min(max_leads, 100)))
-        people = data.get("people") or data.get("contacts") or data.get("data", {}).get("people") or []
+        per_page = max(1, min(max_leads, 100))
         leads: list[LeadInput] = []
-        for person in people[:max_leads]:
-            lead = self._person_to_lead(person)
-            if lead.email:
+        seen_emails: set[str] = set()
+        locked = 0
+        page = 1
+        pages_fetched = 0
+        while len(leads) < max_leads and page <= MAX_PAGES:
+            data = self.client.search_people(filters=filters, page=page, per_page=per_page)
+            pages_fetched += 1
+            people = data.get("people") or data.get("contacts") or (data.get("data") or {}).get("people") or []
+            if not people:
+                break
+            for person in people:
+                if len(leads) >= max_leads:
+                    break
+                lead = self._person_to_lead(person)
+                if not lead.email or lead.email.lower() in seen_emails:
+                    continue
+                if self._is_locked_email(lead.email):
+                    locked += 1
+                    continue
+                seen_emails.add(lead.email.lower())
                 leads.append(lead)
-        return leads
+            total_pages = (data.get("pagination") or {}).get("total_pages")
+            if isinstance(total_pages, int) and page >= total_pages:
+                break
+            if len(people) < per_page:
+                break  # short page = last page
+            page += 1
+        return ApolloSearchResult(leads=leads, locked_email_count=locked, pages_fetched=pages_fetched)
+
+    @staticmethod
+    def _is_locked_email(email: str) -> bool:
+        # Free-tier Apollo returns placeholders instead of real addresses.
+        lowered = email.lower()
+        return "email_not_unlocked" in lowered or lowered.endswith("@domain.com")
 
     def _person_to_lead(self, person: dict[str, Any]) -> LeadInput:
         organization = person.get("organization") or person.get("account") or {}
@@ -117,6 +176,10 @@ class ApolloLeadProvider:
         title = str(person.get("title") or person.get("headline") or "").strip()
         country = str(person.get("country") or person.get("person_country") or organization.get("country") or "").strip()
         context_parts = [part for part in [title, company_name, industry, country] if part]
+        # Provenance lives in `source`, never in `context`: context feeds the email
+        # body via {{lead_context}}, and a lead with a website gets an empty context
+        # so website enrichment can fill it with something worth referencing.
+        context = "" if website else " · ".join(context_parts)
         return LeadInput(
             first_name=first_name,
             last_name=last_name,
@@ -126,5 +189,6 @@ class ApolloLeadProvider:
             country=country,
             industry=industry,
             website=website,
-            context="Apollo lead" + (f": {' · '.join(context_parts)}" if context_parts else ""),
+            context=context,
+            source="apollo",
         )

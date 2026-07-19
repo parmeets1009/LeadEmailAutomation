@@ -87,12 +87,13 @@
             <div>
               <label for="llmProvider">LLM provider</label>
               <select id="llmProvider">
+                <option value="claude">Claude (recommended)</option>
                 <option value="deterministic">Deterministic fallback</option>
                 <option value="codex">Codex</option>
                 <option value="gemini">Gemini</option>
               </select>
             </div>
-            <div><label for="llmModel">LLM model</label><input id="llmModel" placeholder="optional, e.g. gemini-3.1-pro-preview" /></div>
+            <div><label for="llmModel">LLM model</label><input id="llmModel" placeholder="optional, e.g. claude-opus-4-8" /></div>
           </div>
           <div class="row">
             <div><label for="targetTitles">Target titles</label><input id="targetTitles" value="Procurement Manager, Sourcing Manager, Operations Manager" /></div>

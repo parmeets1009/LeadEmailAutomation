@@ -11,8 +11,13 @@ from urllib.parse import urlencode
 
 import httpx
 
-GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.compose"]
-OUTLOOK_SCOPES = ["offline_access", "Mail.ReadWrite"]
+# compose = draft creation; send = Mode B auto-send; readonly = reply sync.
+GMAIL_SCOPES = [
+    "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.readonly",
+]
+OUTLOOK_SCOPES = ["offline_access", "Mail.ReadWrite", "Mail.Send", "Mail.Read"]
 
 
 class OAuthSetupError(Exception):
@@ -169,7 +174,9 @@ class OAuthSetupService:
 
 def configs_from_env(env: Mapping[str, str] | None = None) -> dict[str, OAuthProviderConfig]:
     env = env or os.environ
-    default_base_url = env.get("APP_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+    # Default matches the bridge topology (backend/server.py mounts the API at
+    # /api on port 8001); the standalone dev server should set APP_BASE_URL.
+    default_base_url = env.get("APP_BASE_URL", "http://127.0.0.1:8001/api").rstrip("/")
     return {
         "gmail": OAuthProviderConfig(
             provider="gmail",

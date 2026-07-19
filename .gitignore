@@ -1,32 +1,37 @@
+# Python
 __pycache__/
 *.py[cod]
 .venv/
+
+# Environment and credential files
 .env
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
+
+# Runtime data (campaign_runs holds live state on the server; only the
+# committed samples belong in git)
 campaign_runs/*.tmp
--e 
-# Environment and credential files
-.env
-.env.*
-*.env
-credentials.json
-*.pem
-*.key
-.credentials
--e 
-# Environment and credential files
-.env
-.env.*
-*.env
-credentials.json
-*.pem
-*.key
-.credentials
--e 
-# Environment and credential files
-.env
-.env.*
-*.env
-credentials.json
-*.pem
-*.key
-.credentials
+campaign_runs/contacted.json
+campaign_runs/suppression.json
+campaign_runs/send_log.json
+campaign_runs/icp.json
+campaign_runs/oauth_tokens/
+campaign_runs/oauth_state/
+campaign_runs/mailbox_drafts/
+backend/campaign_runs/oauth_tokens/
+backend/campaign_runs/oauth_state/
+backend/campaign_runs/mailbox_drafts/
+backend/campaign_runs/contacted.json
+backend/campaign_runs/suppression.json
+backend/campaign_runs/send_log.json
+backend/campaign_runs/icp.json
+campaign_runs/*.tmp.tmp
+campaign_runs/*.json.tmp
+
+# Frontend
+frontend/node_modules/
+.claude/

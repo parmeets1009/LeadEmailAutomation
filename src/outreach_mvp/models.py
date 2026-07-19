@@ -22,6 +22,8 @@ class BusinessProfile:
     target_industries: list[str]
     value_propositions: list[str]
     suggested_apollo_filters: dict[str, list[str] | str]
+    generated_by: str = "fallback"
+    postal_address: str = ""
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,11 @@ class CampaignInput:
     template: str
     target_titles: list[str] = field(default_factory=list)
     target_industries: list[str] = field(default_factory=list)
+    score_threshold: int = 50
+    delivery_mode: str = "draft"
+    # Follow-up stages: [{"offset_days": int, "template": str}, ...]; stage 0 is
+    # the campaign template itself.
+    stages: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -48,6 +55,7 @@ class LeadInput:
     industry: str
     website: str
     context: str = ""
+    source: str = ""
 
 
 @dataclass(frozen=True)
@@ -77,6 +85,14 @@ class EmailDraft:
     approved_by: str = ""
     review_notes: str = ""
     edited_by: str = ""
+    generated_by: str = "fallback"
+    llm_error: str = ""
+    render_warnings: list[str] = field(default_factory=list)
+    sent_at: str = ""
+    replied: bool = False
+    reply_summary: str = ""
+    stage: int = 0
+    followup_of: str = ""
 
 
 @dataclass(frozen=True)
@@ -123,6 +139,14 @@ def from_campaign_result(data: dict[str, Any]) -> CampaignResult:
                 approved_by=draft_data.get("approved_by", ""),
                 review_notes=draft_data.get("review_notes", ""),
                 edited_by=draft_data.get("edited_by", ""),
+                generated_by=draft_data.get("generated_by", "fallback"),
+                llm_error=draft_data.get("llm_error", ""),
+                render_warnings=list(draft_data.get("render_warnings", [])),
+                sent_at=draft_data.get("sent_at", ""),
+                replied=draft_data.get("replied", False),
+                reply_summary=draft_data.get("reply_summary", ""),
+                stage=draft_data.get("stage", 0),
+                followup_of=draft_data.get("followup_of", ""),
             )
         )
     return CampaignResult(

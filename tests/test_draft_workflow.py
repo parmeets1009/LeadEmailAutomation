@@ -1,6 +1,8 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from outreach_mvp.models import CompanyInput, CampaignInput, LeadInput
 from outreach_mvp.orchestrator import DraftFirstOrchestrator
@@ -10,10 +12,13 @@ from outreach_mvp.storage import JsonCampaignStore
 
 
 class DraftFirstWorkflowTests(unittest.TestCase):
-    def test_llm_router_switches_between_codex_gemini_and_deterministic(self):
-        self.assertEqual(LLMRouter(provider="codex").provider, "codex")
-        self.assertEqual(LLMRouter(provider="gemini").provider, "gemini")
-        self.assertEqual(LLMRouter(provider="deterministic").provider, "deterministic")
+    def test_llm_router_switches_between_providers(self):
+        no_keys = {"ANTHROPIC_API_KEY": "", "OPENAI_API_KEY": "", "GOOGLE_API_KEY": "", "GEMINI_API_KEY": ""}
+        with mock.patch.dict(os.environ, no_keys):
+            self.assertEqual(LLMRouter(provider="claude").provider, "claude")
+            self.assertEqual(LLMRouter(provider="codex").provider, "codex")
+            self.assertEqual(LLMRouter(provider="gemini").provider, "gemini")
+            self.assertEqual(LLMRouter(provider="deterministic").provider, "deterministic")
 
         with self.assertRaisesRegex(ValueError, "Unsupported LLM provider"):
             LLMRouter(provider="unknown")

@@ -21,6 +21,15 @@ const NAV = [
   { to: "/mailboxes", label: "Mailboxes", icon: Mailbox, testid: "nav-link-mailboxes" },
 ];
 
+function Monogram() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true" className="shrink-0">
+      <rect width="32" height="32" rx="6" fill="#1d1a16" stroke="#3d372f" />
+      <path d="M8 24V8h3.2l9.6 11.4V8H24v16h-3.2L11.2 12.6V24H8z" fill="#c29a5b" />
+    </svg>
+  );
+}
+
 export default function Layout({ children }) {
   const location = useLocation();
   const current = NAV.find(
@@ -30,15 +39,20 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen flex bg-ink-900 text-zinc-100">
       <aside className="w-64 shrink-0 border-r border-line bg-ink-900 flex flex-col">
-        <div className="px-6 pt-6 pb-5 border-b border-line">
-          <div className="text-[10px] tracking-overline uppercase font-semibold text-cobalt-400 mb-1">
-            Outreach Cockpit
-          </div>
-          <div
-            className="font-display text-lg font-semibold leading-tight"
-            data-testid="app-brand"
-          >
-            Lead Email Automation
+        <div className="px-5 pt-6 pb-5 border-b border-line">
+          <div className="flex items-center gap-3">
+            <Monogram />
+            <div className="min-w-0">
+              <div className="text-[10px] tracking-overline uppercase font-semibold text-cobalt-400">
+                Novatide · Outreach Desk
+              </div>
+              <div
+                className="font-display text-[17px] font-medium leading-tight text-zinc-100"
+                data-testid="app-brand"
+              >
+                Lead Email Automation
+              </div>
+            </div>
           </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5">
@@ -51,10 +65,10 @@ export default function Layout({ children }) {
                 end={item.end}
                 data-testid={item.testid}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+                  `flex items-center gap-3 px-3 py-2 text-sm rounded-sm border-l-2 transition-colors ${
                     isActive
-                      ? "bg-ink-700 text-white border border-line2"
-                      : "text-zinc-400 hover:text-zinc-100 hover:bg-ink-800 border border-transparent"
+                      ? "border-cobalt-500 bg-ink-700 text-zinc-50"
+                      : "border-transparent text-zinc-400 hover:text-zinc-100 hover:bg-ink-800"
                   }`
                 }
               >
@@ -67,19 +81,20 @@ export default function Layout({ children }) {
         <div className="p-4 border-t border-line text-[11px] text-zinc-500 leading-relaxed">
           <div className="flex items-center gap-1.5 mb-1">
             <CircleDot size={12} className="text-emerald-400" />
-            <span className="font-medium text-zinc-300">Draft-first mode</span>
+            <span className="font-medium text-zinc-300">Approval-gated delivery</span>
           </div>
-          The app never sends email. Every draft requires explicit human approval.
+          Nothing leaves this desk without explicit human approval. Suppression is
+          permanent and enforced in code.
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b border-line flex items-center justify-between px-6 bg-ink-900/80 backdrop-blur sticky top-0 z-10">
+        <header className="h-14 border-b border-line flex items-center justify-between px-6 bg-ink-900/85 backdrop-blur sticky top-0 z-10">
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-xs uppercase tracking-overline text-zinc-500">
               {current ? "Workspace" : "Page"}
             </span>
-            <span className="text-zinc-700">/</span>
+            <span className="text-line2">/</span>
             <span className="text-sm font-medium text-zinc-200 truncate">
               {current?.label || "Lead Email Automation"}
             </span>
@@ -88,11 +103,11 @@ export default function Layout({ children }) {
             <span
               className="badge-warning"
               data-testid="safety-pill-indicator"
-              title="The app does not auto-send. Drafts require human approval."
+              title="Drafts require human approval. Auto-send is opt-in, capped, and compliance-gated."
             >
               <ShieldAlert size={12} /> Human approval required
             </span>
-            <span className="badge-success">No auto-send</span>
+            <span className="badge-success">Suppression enforced</span>
           </div>
         </header>
 

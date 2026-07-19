@@ -13,7 +13,7 @@ class TestHealth:
 
     def test_root_is_frontend_not_backend(self, api):
         # The public preview root must serve the React frontend, not the backend bridge.
-        public = os.environ.get("REACT_APP_BACKEND_URL", "https://06bbb951-fd24-4b25-af48-234830d5b128.preview.emergentagent.com").rstrip("/")
+        public = os.environ.get("REACT_APP_BACKEND_URL", "http://127.0.0.1:8001").rstrip("/")
         r = api.get(public + "/")
         assert r.status_code == 200
         ctype = r.headers.get("content-type", "")

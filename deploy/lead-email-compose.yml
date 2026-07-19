@@ -1,4 +1,23 @@
-version: '3.9'
+# LeadEmailAutomation — Hostinger VPS deployment behind Traefik.
+#
+# Before first start (see docs/hostinger-traefik-deploy.md and the playbook §7.4):
+#   1. Verify the Traefik network name (`docker network ls | grep traefik`) and
+#      certresolver name — fix the labels below if they differ.
+#   2. Create .env in the REPO ROOT with at least:
+#        LEAD_BASIC_AUTH='admin:$apr1$...'  (generate: htpasswd -nb admin 'password';
+#                                            SINGLE-QUOTE the value so the dotenv
+#                                            parser never touches the $ signs)
+#        ANTHROPIC_API_KEY=sk-ant-...
+#        APP_BASE_URL=https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud/api
+#        UNSUBSCRIBE_SECRET=<long random string — the app REFUSES to start without it>
+#        DAILY_SEND_CAP=20
+#      plus GOOGLE_/MICROSOFT_ OAuth ids+secrets and APOLLO_API_KEY when ready.
+#      NOTE: APP_BASE_URL includes /api because the bridge mounts the API there;
+#      OAuth redirect defaults and unsubscribe links derive from it.
+#   3. Start with --env-file so ${LEAD_BASIC_AUTH} interpolates into the labels
+#      (the service-level env_file does NOT feed label interpolation):
+#        mkdir -p campaign_runs
+#        docker compose --env-file .env -f deploy/lead-email-compose.yml up -d
 
 services:
   lead-email-app:
@@ -7,26 +26,29 @@ services:
     working_dir: /app
     command: >-
       sh -lc "pip install --no-cache-dir -e . &&
-      PYTHONPATH=src uvicorn outreach_mvp.api:app --host 0.0.0.0 --port 8000"
+      PYTHONPATH=src uvicorn server:app --app-dir backend --host 0.0.0.0 --port 8001"
     volumes:
       - ../:/app
-    environment:
-      APP_BASE_URL: https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud
-      GOOGLE_OAUTH_REDIRECT_URI: https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud/oauth/gmail/callback
-      MICROSOFT_OAUTH_REDIRECT_URI: https://lead.hermes-agent-2bhv.srv1390211.hstgr.cloud/oauth/outlook/callback
-      # Optional if live draft creation is desired:
-      # GOOGLE_OAUTH_CLIENT_ID: your-google-client-id
-      # GOOGLE_OAUTH_CLIENT_SECRET: your-google-client-secret
-      # MICROSOFT_OAUTH_CLIENT_ID: your-microsoft-client-id
-      # MICROSOFT_OAUTH_CLIENT_SECRET: your-microsoft-client-secret
-      # APOLLO_API_KEY: your-apollo-api-key
+    env_file:
+      - ../.env
     labels:
       - traefik.enable=true
+      # Basic Auth for everything…
+      - traefik.http.middlewares.lead-auth.basicauth.users=${LEAD_BASIC_AUTH}
       - traefik.http.routers.lead-email.rule=Host(`lead.hermes-agent-2bhv.srv1390211.hstgr.cloud`)
       - traefik.http.routers.lead-email.entrypoints=websecure
       - traefik.http.routers.lead-email.tls=true
       - traefik.http.routers.lead-email.tls.certresolver=letsencrypt
-      - traefik.http.services.lead-email.loadbalancer.server.port=8000
+      - traefik.http.routers.lead-email.middlewares=lead-auth
+      - traefik.http.routers.lead-email.priority=1
+      # …EXCEPT the public unsubscribe endpoints, which recipients must reach
+      # without credentials. Higher priority wins in Traefik.
+      - traefik.http.routers.lead-unsub.rule=Host(`lead.hermes-agent-2bhv.srv1390211.hstgr.cloud`) && PathPrefix(`/api/u/`)
+      - traefik.http.routers.lead-unsub.entrypoints=websecure
+      - traefik.http.routers.lead-unsub.tls=true
+      - traefik.http.routers.lead-unsub.tls.certresolver=letsencrypt
+      - traefik.http.routers.lead-unsub.priority=10
+      - traefik.http.services.lead-email.loadbalancer.server.port=8001
       - traefik.docker.network=traefik
     networks:
       - traefik

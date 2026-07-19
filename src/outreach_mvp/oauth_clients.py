@@ -11,7 +11,10 @@ import httpx
 from .mailbox import GmailDraftClient, OutlookDraftClient
 
 GMAIL_COMPOSE_SCOPE = "https://www.googleapis.com/auth/gmail.compose"
+GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
+GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 GRAPH_MESSAGES_ENDPOINT = "https://graph.microsoft.com/v1.0/me/messages"
+GRAPH_SENDMAIL_ENDPOINT = "https://graph.microsoft.com/v1.0/me/sendMail"
 
 
 @dataclass(frozen=True)
@@ -56,6 +59,23 @@ class GmailOAuthDraftClient:
         result = self.service.users().drafts().create(userId="me", body=draft).execute()
         return {"id": result.get("id", ""), "message_id": result.get("message", {}).get("id", "")}
 
+    def send_message(self, raw_message: str) -> dict[str, Any]:
+        result = self.service.users().messages().send(userId="me", body={"raw": raw_message}).execute()
+        return {"id": result.get("id", "")}
+
+    def list_recent_messages(self, newer_than_days: int = 7) -> list[dict[str, Any]]:
+        listing = self.service.users().messages().list(userId="me", q=f"in:inbox newer_than:{newer_than_days}d", maxResults=50).execute()
+        messages = []
+        for ref in listing.get("messages", []) or []:
+            detail = self.service.users().messages().get(userId="me", id=ref["id"], format="metadata", metadataHeaders=["From", "Subject"]).execute()
+            headers = {h["name"].lower(): h["value"] for h in detail.get("payload", {}).get("headers", [])}
+            messages.append({
+                "from_email": headers.get("from", ""),
+                "subject": headers.get("subject", ""),
+                "snippet": detail.get("snippet", ""),
+            })
+        return messages
+
 
 class OutlookOAuthDraftClient:
     """OAuth-backed Microsoft Graph draft client.
@@ -85,6 +105,34 @@ class OutlookOAuthDraftClient:
         )
         response.raise_for_status()
         return response.json()
+
+    def send_mail(self, payload: dict[str, Any]) -> dict[str, Any]:
+        response = self.http_client.post(
+            GRAPH_SENDMAIL_ENDPOINT,
+            headers={"Authorization": f"Bearer {self.access_token}", "Content-Type": "application/json"},
+            json=payload,
+        )
+        response.raise_for_status()
+        # Graph returns 202 with an empty body on success.
+        return {"id": "", "status": "accepted"}
+
+    def list_recent_messages(self, newer_than_days: int = 7) -> list[dict[str, Any]]:
+        from datetime import datetime, timedelta, timezone
+
+        since = (datetime.now(timezone.utc) - timedelta(days=newer_than_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        response = self.http_client.get(
+            f"{GRAPH_MESSAGES_ENDPOINT}?$filter=receivedDateTime ge {since}&$top=50&$select=from,subject,bodyPreview",
+            headers={"Authorization": f"Bearer {self.access_token}"},
+        )
+        response.raise_for_status()
+        messages = []
+        for item in response.json().get("value", []):
+            messages.append({
+                "from_email": ((item.get("from") or {}).get("emailAddress") or {}).get("address", ""),
+                "subject": item.get("subject", ""),
+                "snippet": item.get("bodyPreview", ""),
+            })
+        return messages
 
 
 def create_mailbox_clients_from_env(env: Mapping[str, str] | None = None) -> MailboxClients:

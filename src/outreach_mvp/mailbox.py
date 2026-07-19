@@ -36,6 +36,27 @@ class OutlookDraftClient(Protocol):
         """Create an Outlook/Microsoft Graph draft message."""
 
 
+class GmailSendClient(Protocol):
+    def send_message(self, raw_message: str) -> dict[str, Any]:
+        """Send a base64url RFC 2822 message via Gmail."""
+
+
+class OutlookSendClient(Protocol):
+    def send_mail(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Send via Microsoft Graph /me/sendMail."""
+
+
+@dataclass(frozen=True)
+class MailboxSendResult:
+    provider: str
+    status: str
+    draft_id: str
+    message_id: str
+    to_email: str
+    from_email: str
+    subject: str
+
+
 class MailboxDraftError(Exception):
     pass
 
@@ -154,6 +175,50 @@ class OutlookApiDraftStore:
             from_email=campaign.sender_email,
             subject=draft.subject,
             storage_path="outlook_graph",
+        )
+
+
+class GmailApiSendStore:
+    """Live Gmail SEND adapter. Same approval gate as drafts — non-negotiable."""
+
+    def __init__(self, client: GmailSendClient) -> None:
+        self.client = client
+
+    def send(self, campaign: CampaignInput, draft: EmailDraft) -> MailboxSendResult:
+        if not draft.approved or draft.review_status != "approved":
+            raise ApprovalRequiredError("draft must be approved before sending")
+        raw_message = build_gmail_raw_message(campaign, draft)
+        response = self.client.send_message(raw_message)
+        return MailboxSendResult(
+            provider="gmail",
+            status="sent",
+            draft_id=draft.draft_id,
+            message_id=str(response.get("id") or ""),
+            to_email=draft.lead.email,
+            from_email=campaign.sender_email,
+            subject=draft.subject,
+        )
+
+
+class OutlookApiSendStore:
+    """Live Outlook/Graph SEND adapter. Same approval gate as drafts."""
+
+    def __init__(self, client: OutlookSendClient) -> None:
+        self.client = client
+
+    def send(self, campaign: CampaignInput, draft: EmailDraft) -> MailboxSendResult:
+        if not draft.approved or draft.review_status != "approved":
+            raise ApprovalRequiredError("draft must be approved before sending")
+        payload = {"message": build_outlook_message(campaign, draft), "saveToSentItems": True}
+        response = self.client.send_mail(payload)
+        return MailboxSendResult(
+            provider="outlook",
+            status="sent",
+            draft_id=draft.draft_id,
+            message_id=str(response.get("id") or ""),
+            to_email=draft.lead.email,
+            from_email=campaign.sender_email,
+            subject=draft.subject,
         )
 
 

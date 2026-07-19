@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--leads-csv", required=True, type=Path)
     parser.add_argument("--out", default="campaign_runs", type=Path)
     parser.add_argument("--max-drafts", default=10, type=int)
-    parser.add_argument("--llm-provider", default="deterministic", choices=["deterministic", "codex", "gemini"])
+    parser.add_argument("--llm-provider", default="deterministic", choices=["deterministic", "claude", "codex", "gemini"])
     parser.add_argument("--llm-model", default="")
     parser.add_argument("--enrich-websites", action="store_true", help="Fetch public lead websites for personalization context before scoring")
     args = parser.parse_args(argv)
@@ -62,7 +62,12 @@ def main(argv: list[str] | None = None) -> int:
         target_industries=["Industrial", "Construction", "Manufacturing"],
     )
     enrichment_provider = ScraplingEnrichmentProvider() if args.enrich_websites else None
-    result = DraftFirstOrchestrator(llm_provider=args.llm_provider, llm_model=args.llm_model or None, enrichment_provider=enrichment_provider).create_draft_campaign(company, campaign, _load_leads(args.leads_csv))
+    try:
+        orchestrator = DraftFirstOrchestrator(llm_provider=args.llm_provider, llm_model=args.llm_model or None, enrichment_provider=enrichment_provider)
+    except ValueError as exc:
+        print(f"error: {exc}")
+        return 2
+    result = orchestrator.create_draft_campaign(company, campaign, _load_leads(args.leads_csv))
     saved = JsonCampaignStore(args.out).save(result)
     print(json.dumps({"saved": str(saved), "draft_count": len(result.drafts), "skipped": result.skipped, "llm_provider": result.llm_provider, "llm_model": result.llm_model}, indent=2))
     return 0

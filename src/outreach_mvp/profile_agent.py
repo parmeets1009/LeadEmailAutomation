@@ -12,7 +12,7 @@ class BusinessProfileAgent:
 
     def profile(self, company: CompanyInput) -> BusinessProfile:
         if self.llm_router:
-            llm_profile = self.llm_router.profile_company(company)
+            llm_profile, _error = self.llm_router.profile_company(company)
             if llm_profile:
                 return llm_profile
         description = company.description.strip()
@@ -35,6 +35,8 @@ class BusinessProfileAgent:
                 "organization_locations": company.details.get("export_markets", "").split(", ") if company.details.get("export_markets") else [],
                 "q_organization_keyword_tags": industries,
             },
+            generated_by="fallback",
+            postal_address=company.details.get("postal_address", ""),
         )
 
     def _product_categories(self, text: str) -> list[str]:

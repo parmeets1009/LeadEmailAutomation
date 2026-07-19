@@ -255,6 +255,17 @@ function DraftCard({ draft, campaignId, delivery, onChange, onReload, setStatusB
               {draft.draft_id}
             </span>
             <StatusPill status={status} />
+            {draft.generated_by === "llm" ? (
+              <span className="badge-info" title="Written by the AI model">AI</span>
+            ) : null}
+            {draft.generated_by === "fallback" ? (
+              <span
+                className="badge-warning"
+                title={draft.llm_error || "Deterministic template output (no LLM used)"}
+              >
+                template
+              </span>
+            ) : null}
             {draft.approved ? (
               <span className="badge-success">
                 <CheckCircle2 size={11} /> approved
@@ -297,6 +308,22 @@ function DraftCard({ draft, campaignId, delivery, onChange, onReload, setStatusB
             data-testid={`draft-body-${draft.draft_id}`}
           />
         </div>
+
+        {draft.render_warnings?.length ? (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-300 flex items-start gap-2">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <div>
+              <div className="font-semibold uppercase tracking-overline text-[10px] mb-1">
+                Template warnings
+              </div>
+              <ul className="list-disc list-inside space-y-0.5">
+                {draft.render_warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : null}
 
         {draft.compliance?.warnings?.length ? (
           <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-300 flex items-start gap-2">

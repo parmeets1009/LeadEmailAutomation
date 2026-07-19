@@ -1,11 +1,19 @@
 import base64
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from starlette.testclient import TestClient
 
 from outreach_mvp.api import create_app
+
+# Blank every external-service env var so tests are hermetic regardless of the
+# developer's shell (empty string is falsy — no real client is ever built).
+from env_helpers import HERMETIC_ENV
+
+NO_LLM_KEYS = dict(HERMETIC_ENV)
 
 
 class FakeGmailDraftClient:
@@ -48,10 +56,13 @@ class FakeApolloClient:
 
 class ApiWorkflowTests(unittest.TestCase):
     def setUp(self):
+        self.env_patcher = mock.patch.dict(os.environ, NO_LLM_KEYS)
+        self.env_patcher.start()
         self.tmpdir = tempfile.TemporaryDirectory()
         self.client = TestClient(create_app(storage_dir=Path(self.tmpdir.name)))
 
     def tearDown(self):
+        self.env_patcher.stop()
         self.tmpdir.cleanup()
 
     def test_health_endpoint_reports_ok(self):
@@ -66,8 +77,16 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["default_provider"], "deterministic")
+        self.assertIn("claude", body["available_providers"])
         self.assertIn("codex", body["available_providers"])
         self.assertIn("gemini", body["available_providers"])
+        self.assertEqual(body["default_models"]["claude"], "claude-opus-4-8")
+
+    def test_llm_default_provider_is_claude_when_key_is_configured(self):
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}):
+            client = TestClient(create_app(storage_dir=Path(self.tmpdir.name)))
+            body = client.get("/llm/providers").json()
+        self.assertEqual(body["default_provider"], "claude")
 
     def test_dashboard_endpoint_serves_review_ui(self):
         response = self.client.get("/")
@@ -79,7 +98,7 @@ class ApiWorkflowTests(unittest.TestCase):
         self.assertIn("Company Profile", html)
         self.assertIn("Campaign Builder", html)
         self.assertIn("LLM provider", html)
-        self.assertIn("gemini-3.1-pro-preview", html)
+        self.assertIn("claude-opus-4-8", html)
         self.assertIn("Enrich lead websites", html)
         self.assertIn("Lead CSV", html)
         self.assertIn("Draft Review", html)

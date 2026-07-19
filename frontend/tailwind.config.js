@@ -5,27 +5,30 @@ export default {
     extend: {
       fontFamily: {
         sans: ["IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["Outfit", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+        display: ["Fraunces", "Georgia", "serif"],
+        mono: ["IBM Plex Mono", "ui-monospace", "monospace"],
       },
       colors: {
+        // Warm ink surfaces — deliberately not the stock zinc/slate AI palette.
         ink: {
-          900: "#09090b",
-          800: "#121214",
-          700: "#18181b",
-          600: "#1f1f23",
+          900: "#0e0d0b",
+          800: "#161411",
+          700: "#1d1a16",
+          600: "#26221d",
         },
-        line: "#27272a",
-        line2: "#3f3f46",
+        line: "#292520",
+        line2: "#3d372f",
+        // NOTE: the key stays "cobalt" so existing class references keep working,
+        // but the values are the brand bronze. Rename in a dedicated sweep only.
         cobalt: {
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
+          400: "#d4a86a",
+          500: "#c29a5b",
+          600: "#a97f41",
+          700: "#8a6634",
         },
       },
       letterSpacing: {
-        overline: "0.2em",
+        overline: "0.18em",
       },
     },
   },

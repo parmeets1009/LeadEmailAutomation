@@ -85,7 +85,14 @@ Available endpoints:
 - `GET /campaigns/{campaign_id}/drafts` lists reviewable drafts with stable draft IDs and review status.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/approve` marks a draft as approved and stores reviewer notes.
 - `PATCH /campaigns/{campaign_id}/drafts/{draft_id}/edit` updates draft subject/body and resets approval status to edited/pending re-approval.
-- `POST /campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts` creates a safe local Gmail/Outlook-shaped draft artifact only after draft approval. With an injected Gmail client, `{ "provider": "gmail", "delivery": "gmail_api" }` creates a real Gmail draft instead of a local artifact. With an injected Outlook client, `{ "provider": "outlook", "delivery": "outlook_graph" }` creates a real Microsoft Graph draft.
+- `POST /campaigns/{campaign_id}/drafts/{draft_id}/mailbox-drafts` creates a safe local Gmail/Outlook-shaped draft artifact only after draft approval. With an injected Gmail client, `{ "provider": "gmail", "delivery": "gmail_api" }` creates a real Gmail draft instead of a local artifact. With an injected Outlook client, `{ "provider": "outlook", "delivery": "outlook_graph" }` creates a real Microsoft Graph draft. Successful mailbox drafts mark the recipient in the cross-campaign contacted store.
+- `POST /campaigns/{campaign_id}/drafts/{draft_id}/send` sends an APPROVED draft live (Gmail/Outlook) — only for campaigns created with `delivery_mode: "auto_send"`, only with a postal address and unsubscribe link in place, never to suppressed or already-sent recipients, and always under the server-enforced `DAILY_SEND_CAP` (default 20/day/mailbox).
+- `POST /campaigns/{campaign_id}/advance` generates the next follow-up stage (from `campaign.stages`) for sent, unanswered, unsuppressed drafts whose offset has elapsed — each follow-up lands in the review queue unapproved.
+- `POST /mailboxes/{provider}/sync-replies` polls the connected mailbox, matches senders against the contacted store, classifies replies (Claude, keyword fallback), marks drafts replied, and instantly suppresses any unsubscribe intent.
+- `POST /icp` / `GET /icp` builds and stores the Ideal Customer Profile (with exclusions) used to prefill targeting.
+- `POST /leads/apollo/search-from-profile` runs an Apollo search straight from a profile's `suggested_apollo_filters`; both Apollo endpoints paginate, count locked emails, and drop already-contacted leads.
+- `GET /deliverability/{domain}` checks SPF/DKIM/DMARC for the sending domain (see `docs/deliverability-checklist.md`).
+- `GET|POST /u/{token}` public one-click unsubscribe (signed tokens; requires `UNSUBSCRIBE_SECRET`); adds to the permanent suppression store.
 
 Minimal API example:
 
