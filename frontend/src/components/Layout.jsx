@@ -9,6 +9,8 @@ import {
   Mailbox,
   ShieldAlert,
   CircleDot,
+  ExternalLink,
+  Boxes,
 } from "lucide-react";
 
 const NAV = [
@@ -71,6 +73,22 @@ export default function Layout({ children }) {
             );
           })}
         </nav>
+        <div className="px-3 py-3 border-t border-line">
+          <div className="px-3 pb-1 text-[10px] uppercase tracking-overline font-semibold text-zinc-600">
+            Novatide Suite
+          </div>
+          <a
+            href="https://srppl.novatide.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="nav-link-ims"
+            className="flex items-center gap-3 px-3 py-2 text-sm rounded-sm text-zinc-400 hover:text-zinc-100 hover:bg-ink-900 transition-colors"
+          >
+            <Boxes size={16} className="shrink-0" />
+            <span className="flex-1">SRPPL IMS</span>
+            <ExternalLink size={12} className="text-zinc-600" />
+          </a>
+        </div>
         <div className="p-4 border-t border-line text-[11px] text-zinc-500 leading-relaxed">
           <div className="flex items-center gap-1.5 mb-1">
             <CircleDot size={12} className="text-emerald-400" />
