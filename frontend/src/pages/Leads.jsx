@@ -60,10 +60,14 @@ export default function Leads() {
         max_leads: Number(state.apolloQuery.max_leads || 10),
       };
       const res = await api.post("/leads/apollo/search", body);
-      update({ apolloLeads: res.data.leads || [] });
+      const d = res.data;
+      update({ apolloLeads: d.leads || [] });
+      const notes = [];
+      if (d.locked_email_count) notes.push(`${d.locked_email_count} locked (need a paid Apollo plan)`);
+      if (d.already_contacted_count) notes.push(`${d.already_contacted_count} already contacted`);
       setStatus({
         tone: "success",
-        text: `Imported ${res.data.leads?.length || 0} Apollo lead(s). They will be used in the next draft generation.`,
+        text: `Imported ${d.leads?.length || 0} usable Apollo lead(s)${notes.length ? ` — ${notes.join(", ")}` : ""}. They'll be used in the next draft generation.`,
       });
     } catch (e) {
       update({ apolloLeads: [] });

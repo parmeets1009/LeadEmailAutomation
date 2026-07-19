@@ -6,6 +6,7 @@ import CampaignBuilder from "./pages/CampaignBuilder.jsx";
 import Leads from "./pages/Leads.jsx";
 import Campaigns from "./pages/Campaigns.jsx";
 import ReviewQueue from "./pages/ReviewQueue.jsx";
+import Compliance from "./pages/Compliance.jsx";
 import Mailboxes from "./pages/Mailboxes.jsx";
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/campaigns" element={<Campaigns />} />
         <Route path="/review" element={<ReviewQueue />} />
         <Route path="/review/:campaignId" element={<ReviewQueue />} />
+        <Route path="/compliance" element={<Compliance />} />
         <Route path="/mailboxes" element={<Mailboxes />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

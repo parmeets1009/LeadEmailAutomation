@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-const STORAGE_KEY = "lea-app-state-v1";
+// v2 adds company.details, campaign delivery_mode/score_threshold/stages — bump
+// the key so a shallow merge of old persisted state can't leave those undefined.
+const STORAGE_KEY = "lea-app-state-v2";
 
 const defaultState = {
   company: {
@@ -8,12 +10,19 @@ const defaultState = {
     website: "https://acme.example",
     description:
       "Rubber products manufacturer for OEMs, industrial distributors, and construction suppliers.",
+    details: {
+      postal_address: "",
+      certifications: "",
+      export_markets: "",
+    },
   },
   campaign: {
     name: "UAE distributor outreach",
     target_country: "United Arab Emirates",
     target_region: "UAE",
     max_drafts: 10,
+    score_threshold: 50,
+    delivery_mode: "draft",
     sender_name: "Maya",
     sender_email: "maya@acme.example",
     target_titles: "Procurement Manager, Sourcing Manager, Operations Manager",
@@ -21,6 +30,7 @@ const defaultState = {
   },
   template:
     "Hi {{first_name}}, I noticed {{company_name}} works in {{lead_context}}. We manufacture {{value_prop}}. Would it make sense to send a short catalogue? Best, {{sender_name}}",
+  stages: [],
   llm: {
     provider: "deterministic",
     model: "",
@@ -143,18 +153,37 @@ export function buildDraftPayload(state) {
     state.leadSource === "apollo" && state.apolloLeads.length
       ? state.apolloLeads
       : csvToLeads(state.leadCsv);
+  const stages = (state.stages || [])
+    .filter((s) => (s.template || "").trim())
+    .map((s) => ({ offset_days: Number(s.offset_days || 3), template: s.template }));
   return {
-    company: { ...state.company, details: {} },
+    company: {
+      name: state.company.name,
+      website: state.company.website,
+      description: state.company.description,
+      details: cleanDetails(state.company.details),
+    },
     campaign: {
       ...state.campaign,
       max_drafts: Number(state.campaign.max_drafts || 10),
+      score_threshold: Number(state.campaign.score_threshold ?? 50),
+      delivery_mode: state.campaign.delivery_mode || "draft",
       target_titles: listFromString(state.campaign.target_titles),
       target_industries: listFromString(state.campaign.target_industries),
       template: state.template,
+      stages,
     },
     leads,
     llm_provider: state.llm.provider,
     llm_model: state.llm.model || null,
     enrich_websites: !!state.llm.enrich_websites,
   };
+}
+
+function cleanDetails(details) {
+  const out = {};
+  for (const [key, value] of Object.entries(details || {})) {
+    if (String(value || "").trim()) out[key] = value;
+  }
+  return out;
 }

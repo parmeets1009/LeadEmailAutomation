@@ -153,6 +153,11 @@ class ApolloSearchFromProfileRequest(BaseModel):
     max_leads: int = Field(default=25, ge=1, le=100)
 
 
+class SuppressRequest(BaseModel):
+    email: str
+    reason: str = "manual"
+
+
 class ApproveDraftRequest(BaseModel):
     approved_by: str = ""
     notes: str = ""
@@ -608,6 +613,30 @@ def create_app(
             return check_domain(domain)
         except Exception as exc:  # noqa: BLE001 — DNS layer errors are environmental
             raise HTTPException(status_code=503, detail=f"DNS check failed: {exc}") from exc
+
+    # ---- Compliance: make the suppression + contacted stores visible/actionable ----
+
+    @app.get("/compliance/overview")
+    def compliance_overview() -> dict[str, Any]:
+        raw = suppression_store._load()  # {email: {reason, ts}}
+        entries = sorted(
+            ({"email": email, **meta} for email, meta in raw.items()),
+            key=lambda item: str(item.get("ts", "")),
+            reverse=True,
+        )
+        return {
+            "suppression_count": len(entries),
+            "suppression": entries,
+            "contacted_count": contacted_store.count(),
+        }
+
+    @app.post("/compliance/suppress", status_code=201)
+    def suppress_email(request: SuppressRequest) -> dict[str, Any]:
+        email = request.email.strip().lower()
+        if "@" not in email:
+            raise HTTPException(status_code=422, detail="a valid email address is required")
+        suppression_store.add(email, request.reason or "manual")
+        return {"email": email, "suppressed": True}
 
     # ---- Public unsubscribe endpoints: NO auth, must stay reachable by recipients ----
 

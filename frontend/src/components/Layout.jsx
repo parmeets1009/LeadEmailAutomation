@@ -11,23 +11,33 @@ import {
   CircleDot,
   ExternalLink,
   Boxes,
+  ShieldOff,
 } from "lucide-react";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, testid: "nav-link-dashboard", end: true },
   { to: "/company", label: "Company Profile", icon: Building2, testid: "nav-link-company" },
-  { to: "/campaign", label: "Campaign Builder", icon: Megaphone, testid: "nav-link-campaign" },
+  { to: "/campaign", label: "Campaign Builder", icon: Megaphone, testid: "nav-link-campaign", exact: true },
   { to: "/leads", label: "Leads", icon: Users, testid: "nav-link-leads" },
   { to: "/campaigns", label: "Campaigns", icon: History, testid: "nav-link-campaigns" },
   { to: "/review", label: "Review Queue", icon: ClipboardCheck, testid: "nav-link-review" },
+  { to: "/compliance", label: "Compliance", icon: ShieldOff, testid: "nav-link-compliance" },
   { to: "/mailboxes", label: "Mailboxes", icon: Mailbox, testid: "nav-link-mailboxes" },
 ];
 
+function matchesNav(pathname, item) {
+  if (item.end) return pathname === item.to;
+  // `exact` items (e.g. /campaign) must not swallow siblings like /campaigns.
+  if (item.exact) return pathname === item.to;
+  return pathname === item.to || pathname.startsWith(item.to + "/");
+}
+
 export default function Layout({ children }) {
   const location = useLocation();
-  const current = NAV.find(
-    (item) => (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))
-  );
+  // Longest matching prefix wins, so /campaigns beats /campaign.
+  const current = NAV
+    .filter((item) => matchesNav(location.pathname, item))
+    .sort((a, b) => b.to.length - a.to.length)[0];
 
   return (
     <div className="min-h-screen flex bg-ink-900 text-zinc-100">
@@ -57,7 +67,7 @@ export default function Layout({ children }) {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.end}
+                end={item.end || item.exact}
                 data-testid={item.testid}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 text-sm rounded-sm border-l-2 transition-colors ${

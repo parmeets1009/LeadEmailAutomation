@@ -56,6 +56,9 @@ class JsonCampaignStore:
                     "status": result.status,
                     "draft_count": len(result.drafts),
                     "approved_count": sum(1 for draft in result.drafts if draft.approved),
+                    "sent_count": sum(1 for draft in result.drafts if draft.sent_at),
+                    "replied_count": sum(1 for draft in result.drafts if draft.replied),
+                    "delivery_mode": getattr(result.campaign, "delivery_mode", "draft"),
                 }
             )
         return campaigns

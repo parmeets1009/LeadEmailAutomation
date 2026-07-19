@@ -57,9 +57,11 @@ export default function Campaigns() {
                 <tr className="text-left text-[11px] uppercase tracking-overline text-zinc-500 border-y border-line">
                   <th className="px-6 py-3 font-medium">Campaign</th>
                   <th className="px-3 py-3 font-medium">ID</th>
-                  <th className="px-3 py-3 font-medium">Status</th>
+                  <th className="px-3 py-3 font-medium">Mode</th>
                   <th className="px-3 py-3 font-medium text-right">Drafts</th>
                   <th className="px-3 py-3 font-medium text-right">Approved</th>
+                  <th className="px-3 py-3 font-medium text-right">Sent</th>
+                  <th className="px-3 py-3 font-medium text-right">Replied</th>
                   <th className="px-6 py-3 font-medium text-right">Action</th>
                 </tr>
               </thead>
@@ -73,10 +75,14 @@ export default function Campaigns() {
                     <td className="px-6 py-3 text-zinc-100 font-medium">{c.name}</td>
                     <td className="px-3 py-3 text-zinc-400 font-mono text-xs">{c.campaign_id}</td>
                     <td className="px-3 py-3">
-                      <StatusBadge status={c.status} />
+                      <span className={c.delivery_mode === "auto_send" ? "badge-warning" : "badge-muted"}>
+                        {c.delivery_mode === "auto_send" ? "auto-send" : "draft"}
+                      </span>
                     </td>
                     <td className="px-3 py-3 text-right text-zinc-300">{c.draft_count}</td>
                     <td className="px-3 py-3 text-right text-emerald-400">{c.approved_count}</td>
+                    <td className="px-3 py-3 text-right text-cobalt-500">{c.sent_count ?? 0}</td>
+                    <td className="px-3 py-3 text-right text-emerald-400">{c.replied_count ?? 0}</td>
                     <td className="px-6 py-3 text-right">
                       <Link
                         to={`/review/${c.campaign_id}`}

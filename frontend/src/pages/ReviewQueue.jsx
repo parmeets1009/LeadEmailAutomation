@@ -8,6 +8,11 @@ import {
   Loader2,
   ClipboardCheck,
   AlertCircle,
+  Send,
+  MessageSquare,
+  CheckCheck,
+  FastForward,
+  ChevronDown,
 } from "lucide-react";
 import { PageHeader, Card, StatusLine } from "../components/UI.jsx";
 import { api, extractError } from "../lib/api.js";
@@ -24,6 +29,8 @@ export default function ReviewQueue() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [delivery, setDelivery] = useState("local");
+  const [busyBulk, setBusyBulk] = useState("");
+  const [showSkipped, setShowSkipped] = useState(false);
   const [statusBar, setStatusBar] = useState({ tone: "muted", text: "Ready." });
 
   const load = useCallback(async () => {
@@ -49,11 +56,58 @@ export default function ReviewQueue() {
     load();
   }, [load]);
 
+  const deliveryMode = campaign?.campaign?.delivery_mode || "draft";
+  const hasStages = (campaign?.campaign?.stages || []).length > 0;
+  const skipped = campaign ? Object.entries(campaign.skipped || {}) : [];
+  const pendingCount = drafts.filter((d) => !d.approved).length;
+
   const totals = {
     drafts: drafts.length,
     approved: drafts.filter((d) => d.approved).length,
-    skipped: campaign ? Object.keys(campaign.skipped || {}).length : 0,
+    sent: drafts.filter((d) => d.sent_at).length,
+    replied: drafts.filter((d) => d.replied).length,
+    skipped: skipped.length,
   };
+
+  async function bulkApprove() {
+    setBusyBulk("approve");
+    setStatusBar({ tone: "info", text: "Approving all pending drafts…" });
+    try {
+      const pending = drafts.filter((d) => !d.approved);
+      for (const d of pending) {
+        await api.patch(`/campaigns/${campaignId}/drafts/${d.draft_id}/approve`, {
+          approved_by: "dashboard",
+          notes: "Bulk approved",
+        });
+      }
+      setStatusBar({ tone: "success", text: `Approved ${pending.length} draft(s).` });
+      await load();
+    } catch (e) {
+      setStatusBar({ tone: "danger", text: `Bulk approve failed: ${extractError(e)}` });
+    } finally {
+      setBusyBulk("");
+    }
+  }
+
+  async function advanceSequence() {
+    setBusyBulk("advance");
+    setStatusBar({ tone: "info", text: "Generating due follow-ups…" });
+    try {
+      const res = await api.post(`/campaigns/${campaignId}/advance`, {});
+      const created = res.data.created_count || 0;
+      setStatusBar({
+        tone: created ? "success" : "muted",
+        text: created
+          ? `Generated ${created} follow-up draft(s); they're now pending approval below.`
+          : "No follow-ups are due yet (leads must be sent, unanswered, and past the offset).",
+      });
+      await load();
+    } catch (e) {
+      setStatusBar({ tone: "danger", text: `Advance failed: ${extractError(e)}` });
+    } finally {
+      setBusyBulk("");
+    }
+  }
 
   if (!campaignId) {
     return (
@@ -80,7 +134,7 @@ export default function ReviewQueue() {
       <PageHeader
         eyebrow="Review queue"
         title={campaign?.campaign?.name || campaignId}
-        description={`${campaignId}`}
+        description={`${campaignId} · ${deliveryMode === "auto_send" ? "auto-send campaign" : "draft-only campaign"}`}
         actions={
           <div className="flex items-center gap-2">
             <button onClick={() => navigate("/campaigns")} className="btn-secondary">
@@ -100,11 +154,56 @@ export default function ReviewQueue() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-5 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
         <Stat label="Drafts" value={totals.drafts} testid="review-stat-drafts" />
         <Stat label="Approved" value={totals.approved} tone="success" testid="review-stat-approved" />
+        <Stat label="Sent" value={totals.sent} tone="info" testid="review-stat-sent" />
+        <Stat label="Replied" value={totals.replied} tone="success" testid="review-stat-replied" />
         <Stat label="Skipped" value={totals.skipped} tone="warning" testid="review-stat-skipped" />
       </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-5">
+        <button
+          onClick={bulkApprove}
+          disabled={!pendingCount || busyBulk === "approve"}
+          className="btn-secondary"
+          data-testid="review-bulk-approve"
+        >
+          {busyBulk === "approve" ? <Loader2 size={14} className="animate-spin" /> : <CheckCheck size={14} />}
+          Approve all ({pendingCount})
+        </button>
+        {hasStages ? (
+          <button onClick={advanceSequence} disabled={busyBulk === "advance"} className="btn-secondary" data-testid="review-advance">
+            {busyBulk === "advance" ? <Loader2 size={14} className="animate-spin" /> : <FastForward size={14} />}
+            Generate due follow-ups
+          </button>
+        ) : null}
+        {skipped.length ? (
+          <button onClick={() => setShowSkipped((s) => !s)} className="btn-ghost ml-auto" data-testid="review-toggle-skipped">
+            <ChevronDown size={14} className={showSkipped ? "rotate-180 transition-transform" : "transition-transform"} />
+            {showSkipped ? "Hide" : "Show"} {skipped.length} skipped
+          </button>
+        ) : null}
+      </div>
+
+      {showSkipped && skipped.length ? (
+        <Card eyebrow="Not drafted" title="Skipped leads" className="mb-5" dataTestId="review-skipped-card">
+          <div className="overflow-x-auto -mx-6">
+            <table className="w-full text-sm">
+              <tbody>
+                {skipped.map(([email, reason]) => (
+                  <tr key={email} className="border-b border-line">
+                    <td className="px-6 py-2 font-mono text-xs text-zinc-100">{email}</td>
+                    <td className="px-6 py-2 text-right">
+                      <span className="badge-muted">{reason}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : null}
 
       {error ? <StatusLine tone="danger">{error}</StatusLine> : null}
       <StatusLine tone={statusBar.tone} dataTestId="review-status">
@@ -132,6 +231,7 @@ export default function ReviewQueue() {
             draft={d}
             campaignId={campaignId}
             delivery={delivery}
+            deliveryMode={deliveryMode}
             onChange={(updater) =>
               setDrafts((prev) => prev.map((x) => (x.draft_id === d.draft_id ? updater(x) : x)))
             }
@@ -148,6 +248,8 @@ function Stat({ label, value, tone = "default", testid }) {
   const cls =
     tone === "success"
       ? "text-emerald-400"
+      : tone === "info"
+      ? "text-cobalt-500"
       : tone === "warning"
       ? "text-amber-400"
       : "text-zinc-100";
@@ -161,7 +263,7 @@ function Stat({ label, value, tone = "default", testid }) {
   );
 }
 
-function DraftCard({ draft, campaignId, delivery, onChange, onReload, setStatusBar }) {
+function DraftCard({ draft, campaignId, delivery, deliveryMode, onChange, onReload, setStatusBar }) {
   const [subject, setSubject] = useState(draft.subject);
   const [body, setBody] = useState(draft.body);
   const [busy, setBusy] = useState("");
@@ -211,30 +313,18 @@ function DraftCard({ draft, campaignId, delivery, onChange, onReload, setStatusB
 
   async function createMailbox(provider) {
     if (!draft.approved) {
-      setStatusBar({
-        tone: "warning",
-        text: `Approve draft ${draft.draft_id} before creating a mailbox draft.`,
-      });
+      setStatusBar({ tone: "warning", text: `Approve draft ${draft.draft_id} before creating a mailbox draft.` });
       return;
     }
     setBusy(`mailbox-${provider}`);
     const useDelivery =
-      (delivery === "gmail_api" && provider !== "gmail") ||
-      (delivery === "outlook_graph" && provider !== "outlook")
+      (delivery === "gmail_api" && provider !== "gmail") || (delivery === "outlook_graph" && provider !== "outlook")
         ? "local"
         : delivery;
     setStatusBar({ tone: "info", text: `Creating ${provider} mailbox draft (${useDelivery})…` });
     try {
-      const res = await api.post(
-        `/campaigns/${campaignId}/drafts/${draft.draft_id}/mailbox-drafts`,
-        { provider, delivery: useDelivery }
-      );
-      setStatusBar({
-        tone: "success",
-        text: `${provider} ${useDelivery} draft created: ${
-          res.data?.draft_id || res.data?.id || "ok"
-        }`,
-      });
+      const res = await api.post(`/campaigns/${campaignId}/drafts/${draft.draft_id}/mailbox-drafts`, { provider, delivery: useDelivery });
+      setStatusBar({ tone: "success", text: `${provider} ${useDelivery} draft created: ${res.data?.draft_id || res.data?.id || "ok"}` });
     } catch (e) {
       setStatusBar({ tone: "danger", text: `${provider} draft failed: ${extractError(e)}` });
     } finally {
@@ -242,44 +332,58 @@ function DraftCard({ draft, campaignId, delivery, onChange, onReload, setStatusB
     }
   }
 
+  async function sendLive(provider) {
+    setBusy(`send-${provider}`);
+    setStatusBar({ tone: "info", text: `Sending ${draft.draft_id} via ${provider}…` });
+    try {
+      await api.post(`/campaigns/${campaignId}/drafts/${draft.draft_id}/send`, { provider });
+      setStatusBar({ tone: "success", text: `Sent via ${provider}. Recorded in the send log and contacted store.` });
+      await onReload();
+    } catch (e) {
+      setStatusBar({ tone: "danger", text: `Send blocked: ${extractError(e)}` });
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function markSent() {
+    setBusy("mark-sent");
+    setStatusBar({ tone: "info", text: "Marking sent…" });
+    try {
+      await api.patch(`/campaigns/${campaignId}/drafts/${draft.draft_id}/mark-sent`);
+      setStatusBar({ tone: "success", text: "Marked as sent — follow-ups can now advance for this lead." });
+      await onReload();
+    } catch (e) {
+      setStatusBar({ tone: "danger", text: `Mark-sent failed: ${extractError(e)}` });
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
-    <article
-      className="panel scroll-fade-in"
-      id={draft.draft_id}
-      data-testid={`draft-card-${draft.draft_id}`}
-    >
+    <article className="panel scroll-fade-in" id={draft.draft_id} data-testid={`draft-card-${draft.draft_id}`}>
       <header className="px-6 py-4 border-b border-line flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[11px] uppercase tracking-overline font-semibold text-zinc-500 font-mono">
-              {draft.draft_id}
-            </span>
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="text-[11px] uppercase tracking-overline font-semibold text-zinc-500 font-mono">{draft.draft_id}</span>
             <StatusPill status={status} />
-            {draft.generated_by === "llm" ? (
-              <span className="badge-info" title="Written by the AI model">AI</span>
-            ) : null}
+            {draft.stage > 0 ? <span className="badge-info">follow-up {draft.stage}</span> : null}
+            {draft.generated_by === "llm" ? <span className="badge-info" title="Written by the AI model">AI</span> : null}
             {draft.generated_by === "fallback" ? (
-              <span
-                className="badge-warning"
-                title={draft.llm_error || "Deterministic template output (no LLM used)"}
-              >
-                template
-              </span>
+              <span className="badge-warning" title={draft.llm_error || "Deterministic template output (no LLM used)"}>template</span>
             ) : null}
-            {draft.approved ? (
-              <span className="badge-success">
-                <CheckCircle2 size={11} /> approved
-              </span>
-            ) : null}
+            {draft.approved ? <span className="badge-success"><CheckCircle2 size={11} /> approved</span> : null}
+            {draft.sent_at ? <span className="badge-info"><Send size={11} /> sent</span> : null}
+            {draft.replied ? <span className="badge-success"><MessageSquare size={11} /> replied</span> : null}
             {dirty ? <span className="badge-warning">unsaved edits</span> : null}
           </div>
-          <h3 className="font-display text-lg font-medium text-zinc-100 truncate">
-            {draft.subject}
-          </h3>
+          <h3 className="font-display text-lg font-medium text-zinc-100 truncate">{draft.subject}</h3>
           <div className="mt-1 text-xs text-zinc-500 font-mono">
-            To: {draft.lead.first_name} {draft.lead.last_name} &lt;{draft.lead.email}&gt; · {draft.lead.company_name} ·
-            score {draft.lead_score?.score ?? "—"}
+            To: {draft.lead.first_name} {draft.lead.last_name} &lt;{draft.lead.email}&gt; · {draft.lead.company_name} · score {draft.lead_score?.score ?? "—"}
           </div>
+          {draft.reply_summary ? (
+            <div className="mt-1.5 text-xs text-emerald-400">Reply: {draft.reply_summary}</div>
+          ) : null}
         </div>
       </header>
 
@@ -310,77 +414,68 @@ function DraftCard({ draft, campaignId, delivery, onChange, onReload, setStatusB
         </div>
 
         {draft.render_warnings?.length ? (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-300 flex items-start gap-2">
-            <AlertCircle size={14} className="mt-0.5 shrink-0" />
-            <div>
-              <div className="font-semibold uppercase tracking-overline text-[10px] mb-1">
-                Template warnings
-              </div>
-              <ul className="list-disc list-inside space-y-0.5">
-                {draft.render_warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <WarnBlock title="Template warnings" items={draft.render_warnings} />
         ) : null}
-
         {draft.compliance?.warnings?.length ? (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-300 flex items-start gap-2">
-            <AlertCircle size={14} className="mt-0.5 shrink-0" />
-            <div>
-              <div className="font-semibold uppercase tracking-overline text-[10px] mb-1">
-                Compliance warnings
-              </div>
-              <ul className="list-disc list-inside space-y-0.5">
-                {draft.compliance.warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <WarnBlock title="Compliance warnings" items={draft.compliance.warnings} />
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-line">
-          <button
-            onClick={approve}
-            disabled={busy === "approve"}
-            className="btn-primary"
-            data-testid={`draft-approve-${draft.draft_id}`}
-          >
+          <button onClick={approve} disabled={busy === "approve"} className="btn-primary" data-testid={`draft-approve-${draft.draft_id}`}>
             {busy === "approve" ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
             Approve
           </button>
-          <button
-            onClick={saveEdits}
-            disabled={!dirty || busy === "edit"}
-            className="btn-secondary"
-            data-testid={`draft-save-${draft.draft_id}`}
-          >
+          <button onClick={saveEdits} disabled={!dirty || busy === "edit"} className="btn-secondary" data-testid={`draft-save-${draft.draft_id}`}>
             {busy === "edit" ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             Save edits
           </button>
+          {draft.approved && !draft.sent_at ? (
+            <button onClick={markSent} disabled={busy === "mark-sent"} className="btn-ghost" title="Record that you sent this from your own mail client — enables follow-ups" data-testid={`draft-mark-sent-${draft.draft_id}`}>
+              {busy === "mark-sent" ? <Loader2 size={14} className="animate-spin" /> : <CheckCheck size={14} />}
+              Mark sent
+            </button>
+          ) : null}
+
           <span className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => createMailbox("gmail")}
-              disabled={busy.startsWith("mailbox")}
-              className="btn-secondary"
-              data-testid={`draft-mailbox-gmail-${draft.draft_id}`}
-            >
-              <Mail size={14} /> Gmail draft
-            </button>
-            <button
-              onClick={() => createMailbox("outlook")}
-              disabled={busy.startsWith("mailbox")}
-              className="btn-secondary"
-              data-testid={`draft-mailbox-outlook-${draft.draft_id}`}
-            >
-              <Mail size={14} /> Outlook draft
-            </button>
+            {deliveryMode === "auto_send" ? (
+              <>
+                <button onClick={() => sendLive("gmail")} disabled={!draft.approved || draft.sent_at || busy.startsWith("send")} className="btn-primary" data-testid={`draft-send-gmail-${draft.draft_id}`}>
+                  {busy === "send-gmail" ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send · Gmail
+                </button>
+                <button onClick={() => sendLive("outlook")} disabled={!draft.approved || draft.sent_at || busy.startsWith("send")} className="btn-primary" data-testid={`draft-send-outlook-${draft.draft_id}`}>
+                  {busy === "send-outlook" ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send · Outlook
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => createMailbox("gmail")} disabled={busy.startsWith("mailbox")} className="btn-secondary" data-testid={`draft-mailbox-gmail-${draft.draft_id}`}>
+                  <Mail size={14} /> Gmail draft
+                </button>
+                <button onClick={() => createMailbox("outlook")} disabled={busy.startsWith("mailbox")} className="btn-secondary" data-testid={`draft-mailbox-outlook-${draft.draft_id}`}>
+                  <Mail size={14} /> Outlook draft
+                </button>
+              </>
+            )}
           </span>
         </div>
       </div>
     </article>
+  );
+}
+
+function WarnBlock({ title, items }) {
+  return (
+    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-400 flex items-start gap-2">
+      <AlertCircle size={14} className="mt-0.5 shrink-0" />
+      <div>
+        <div className="font-semibold uppercase tracking-overline text-[10px] mb-1">{title}</div>
+        <ul className="list-disc list-inside space-y-0.5">
+          {items.map((w, i) => (
+            <li key={i}>{w}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
 

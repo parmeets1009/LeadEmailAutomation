@@ -4,13 +4,15 @@ import {
   ArrowRight,
   FileText,
   CheckCircle2,
-  XCircle,
   Sparkles,
   Building2,
   Megaphone,
   Users,
   ClipboardCheck,
   Mailbox,
+  Send,
+  MessageSquare,
+  ShieldOff,
 } from "lucide-react";
 import { PageHeader, Card } from "../components/UI.jsx";
 import { api, extractError } from "../lib/api.js";
@@ -20,12 +22,14 @@ export default function Dashboard() {
   const { state } = useAppState();
   const [campaigns, setCampaigns] = useState([]);
   const [mailboxes, setMailboxes] = useState(null);
+  const [compliance, setCompliance] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     Promise.all([
       api.get("/campaigns").then((r) => setCampaigns(r.data.campaigns || [])).catch((e) => setError(extractError(e))),
       api.get("/mailboxes/status").then((r) => setMailboxes(r.data)).catch(() => {}),
+      api.get("/compliance/overview").then((r) => setCompliance(r.data)).catch(() => {}),
     ]);
   }, []);
 
@@ -33,9 +37,11 @@ export default function Dashboard() {
     (acc, c) => {
       acc.drafts += Number(c.draft_count || 0);
       acc.approved += Number(c.approved_count || 0);
+      acc.sent += Number(c.sent_count || 0);
+      acc.replied += Number(c.replied_count || 0);
       return acc;
     },
-    { drafts: 0, approved: 0 }
+    { drafts: 0, approved: 0, sent: 0, replied: 0 }
   );
 
   return (
@@ -63,10 +69,25 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <Metric icon={FileText} label="Drafts created" value={totals.drafts} testid="metric-drafts" />
+      <div className="mb-2 text-[11px] uppercase tracking-overline font-semibold text-zinc-500">
+        Outreach funnel · {campaigns.length} campaign(s)
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+        <Metric icon={FileText} label="Drafts" value={totals.drafts} testid="metric-drafts" />
         <Metric icon={CheckCircle2} label="Approved" value={totals.approved} tone="success" testid="metric-approved" />
-        <Metric icon={XCircle} label="Saved campaigns" value={campaigns.length} tone="info" testid="metric-campaigns" />
+        <Metric icon={Send} label="Sent" value={totals.sent} tone="info" testid="metric-sent" />
+        <Metric icon={MessageSquare} label="Replied" value={totals.replied} tone="success" testid="metric-replied" />
+        <Metric
+          icon={ShieldOff}
+          label="Suppressed"
+          value={compliance ? compliance.suppression_count : "—"}
+          tone="warning"
+          testid="metric-suppressed"
+        />
+      </div>
+      <div className="mb-8 text-xs text-zinc-500">
+        Replied is the number that matters. Sent/replied only advance once you send from an approved
+        draft or connect a mailbox. <Link to="/compliance" className="text-cobalt-500 hover:underline">Manage suppression →</Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -125,17 +146,19 @@ function Metric({ icon: Icon, label, value, tone = "default", testid }) {
     tone === "success"
       ? "text-emerald-400"
       : tone === "info"
-      ? "text-cobalt-400"
-      : "text-zinc-200";
+      ? "text-cobalt-500"
+      : tone === "warning"
+      ? "text-amber-400"
+      : "text-zinc-100";
   return (
-    <div className="panel p-5" data-testid={testid}>
+    <div className="panel p-4" data-testid={testid}>
       <div className="flex items-center justify-between">
         <span className="text-[11px] uppercase tracking-overline font-semibold text-zinc-500">
           {label}
         </span>
-        <Icon size={16} className="text-zinc-600" />
+        <Icon size={15} className="text-zinc-600" />
       </div>
-      <div className={`mt-3 font-display text-4xl font-medium ${toneCls}`}>{value}</div>
+      <div className={`mt-2 font-display text-3xl font-medium ${toneCls}`}>{value}</div>
     </div>
   );
 }
