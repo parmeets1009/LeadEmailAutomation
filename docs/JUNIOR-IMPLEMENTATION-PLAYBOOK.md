@@ -13,10 +13,17 @@
 **Phases 0–4 of this playbook are IMPLEMENTED.** 144 unit tests green; two adversarial
 review rounds (77 agents each) ran and every confirmed finding was fixed — the
 `PLAYBOOK EXECUTION LOG` in `ROADMAP.md` records exactly what was done, every
-decision, and two playbook errata. The React UI carries a professional design
-system (Fraunces/IBM Plex, bronze-on-ink, Novatide branding) — the design tokens
-live in `frontend/src/index.css` + `frontend/tailwind.config.js`; note the color
-key `cobalt` intentionally holds the bronze values (rename only in a dedicated sweep).
+decision, and two playbook errata. The React UI carries a LIGHT professional design system in the REAL Novatide
+brand identity: official logo from `frontend/public/novatide-logo.png` (sourced
+from the Novatide skill's brand assets — NEVER redraw or replace it), deep teal
+`#0F4C5C` accent, warm paper surfaces, Fraunces display serif, and a
+Canva-generated abstract tide texture (`frontend/public/tide-art.png`) as
+dashboard décor. Design tokens live in `frontend/src/index.css` +
+`frontend/tailwind.config.js`. TWO deliberate token tricks (rename only in a
+dedicated sweep): the color key `cobalt` holds the TEAL values, and the `zinc`
+scale is INVERTED (low numbers = dark text on light surfaces) so every page
+restyled centrally. After any frontend edit: `npm run build` and commit the
+regenerated `frontend/dist/` files.
 
 **What remains (in priority order) — pick up here:**
 
